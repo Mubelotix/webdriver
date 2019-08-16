@@ -468,3 +468,9 @@ impl<'a> Tab<'a> {
         }
     }
 }
+
+impl<'a> Drop for Tab<'a> {
+    fn drop(&mut self) {
+        self.close();
+    }
+}
