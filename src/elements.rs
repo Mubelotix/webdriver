@@ -1,23 +1,24 @@
 pub use crate::session::*;
+pub use crate::windows::*;
 use json::*;
 use std::result::Result;
 
 pub struct Element<'a> {
     id: String,
-    session: &'a Session<'a>
+    tab: &'a Tab<'a>
 }
 
 impl<'a> Element<'a> {
-    pub fn new(id: String, session: &'a Session) -> Self {
+    pub fn new(id: String, tab: &'a Tab) -> Self {
         Element{
             id,
-            session,
+            tab
         }
     }
 
     pub fn type_text(&mut self, text: &str) -> Result<(), String> {
         let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
-        if let Some(id) = self.session.get_id() {
+        if let Some(id) = self.tab.get_session_id() {
             request_url += &id;
         } else {
             return Err(String::from("Session does not exist."));
@@ -30,7 +31,7 @@ impl<'a> Element<'a> {
             "text" => text
         };
 
-        let mut res = self.session
+        let mut res = self.tab.session
             .client
             .post(&request_url)
             .body(postdata.to_string())
@@ -44,7 +45,7 @@ impl<'a> Element<'a> {
 
     pub fn click(&mut self) -> Result<(), String> {
         let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
-        if let Some(id) = self.session.get_id() {
+        if let Some(id) = self.tab.get_session_id() {
             request_url += &id;
         } else {
             return Err(String::from("Session does not exist."));
@@ -56,7 +57,7 @@ impl<'a> Element<'a> {
         let postdata = object! {
         };
 
-        let mut res = self.session
+        let mut res = self.tab.session
             .client
             .post(&request_url)
             .body(postdata.to_string())
