@@ -4,7 +4,7 @@ use std::time::Duration;
 use std::result::Result;
 use crate::enums::*;
 use crate::timeouts::*;
-pub use crate::windows::*;
+pub use crate::tab::*;
 
 pub struct Session<'a> {
     id: Option<String>,

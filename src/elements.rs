@@ -1,5 +1,5 @@
 pub use crate::session::*;
-pub use crate::windows::*;
+pub use crate::tab::*;
 use json::*;
 use std::result::Result;
 
