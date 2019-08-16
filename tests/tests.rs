@@ -5,12 +5,13 @@ use std::rc::Rc;
 
 static BROWSER: Browser = Browser::Firefox;
 
-/*#[test]
+#[test]
 fn navigation() {
     let webdriver = Session::new(BROWSER).expect("Echec de création de la session");
-    webdriver.navigate("http://example.com/");
+    let mut tab = webdriver.get_selected_tab().unwrap();
+    tab.navigate("http://example.com/");
     assert_eq!(webdriver.get_url().unwrap(), String::from("http://example.com/"));
-    webdriver.navigate("https://www.google.com/");
+    tab.navigate("https://www.google.com/");
     assert_eq!(webdriver.get_url().unwrap(), String::from("https://www.google.com/"));
     webdriver.back().unwrap();
     assert_eq!(webdriver.get_url().unwrap(), String::from("http://example.com/"));
@@ -23,15 +24,15 @@ fn navigation() {
 #[test]
 fn getters() {
     let webdriver = Session::new(BROWSER).expect("Echec de création de la session");
-    webdriver.navigate("http://example.com/");
+    let mut tab = webdriver.get_selected_tab().unwrap();
+    tab.navigate("http://example.com/");
     assert_eq!(webdriver.get_url().unwrap(), String::from("http://example.com/"));
     assert_eq!(webdriver.get_title().unwrap(), String::from("Example Domain"));
-}*/
+}
 
 #[test]
 fn windows() {
-
-    let webdriver = Rc::new(Session::new(BROWSER).expect("Echec de création de la session"));
+    let webdriver = Session::new(BROWSER).expect("Echec de création de la session");
 
     let mut window1 = webdriver.get_selected_tab().unwrap();
     window1.navigate("https://www.mozilla.org/fr/").unwrap();
