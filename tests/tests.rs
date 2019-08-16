@@ -33,11 +33,11 @@ fn windows() {
 
     let webdriver = Rc::new(Session::new(BROWSER).expect("Echec de création de la session"));
 
-    let mut window1 = Tab::get_selected_tab(Rc::clone(&webdriver)).unwrap();
+    let mut window1 = webdriver.get_selected_tab().unwrap();
     window1.navigate("https://www.mozilla.org/fr/").unwrap();
     assert_eq!(webdriver.get_url().unwrap(), String::from("https://www.mozilla.org/fr/"));
 
-    let mut window2 = Tab::new(Rc::clone(&webdriver)).unwrap();
+    let mut window2 = Tab::new(&webdriver).unwrap();
     window2.navigate("http://example.com/").unwrap();
     assert_eq!(webdriver.get_url().unwrap(), String::from("http://example.com/"));
     window1.navigate("https://www.google.com/").unwrap();

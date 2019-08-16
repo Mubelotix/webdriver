@@ -4,7 +4,7 @@ use std::result::Result;
 
 pub struct Element<'a> {
     id: String,
-    session: &'a Session
+    session: &'a Session<'a>
 }
 
 impl<'a> Element<'a> {
