@@ -3,6 +3,7 @@ use reqwest::Client;
 use std::time::Duration;
 use std::result::Result;
 use crate::enums::*;
+use crate::timeouts::*;
 pub use crate::windows::*;
 
 pub struct Session<'a> {
@@ -146,6 +147,88 @@ impl<'a> Session<'a> {
                     eprintln!("{:?}", json);
                     return Err(String::from("Selenium returned a null result."));
                 }
+            } else {
+                return Err(String::from("Can't parse selenium response to json."));
+            }
+        } else {
+            return Err(String::from("Can't read selenium response."));
+        }
+    }
+
+    pub fn get_timeouts(&self) -> Result<Timeouts, String> {
+        // build command
+        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        if let Some(id) = self.get_id() {
+            request_url += &id;
+        } else {
+            return Err(String::from("Session does not exist."));
+        }
+        request_url.push_str("/timeouts");
+
+        // send command
+        let res = self
+            .client
+            .get(&request_url)
+            .send();
+        if let Err(e) = res {
+            return Err(format!("{}", e));
+        }
+        let mut res = res.unwrap();
+
+        // read response
+        if let Ok(text) = &res.text() {
+            if let Ok(json) = json::parse(text) {
+                if json["value"]["pageLoad"].is_number() &&
+                    json["value"]["implicit"].is_number() 
+                {
+                    return Ok(Timeouts{
+                        script: json["value"]["script"].as_usize(),
+                        page_load: json["value"]["pageLoad"].as_usize().unwrap(),
+                        implicit: json["value"]["implicit"].as_usize().unwrap(),
+                    });
+                } else {
+                    return Err("unknow error".to_string());
+                }
+            } else {
+                return Err(String::from("Can't parse selenium response to json."));
+            }
+        } else {
+            return Err(String::from("Can't read selenium response."));
+        }
+    }
+
+    pub fn set_timeouts(&self, timeouts: Timeouts) -> Result<(), String> {
+        // build command
+        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        if let Some(id) = self.get_id() {
+            request_url += &id;
+        } else {
+            return Err(String::from("Session does not exist."));
+        }
+        request_url.push_str("/timeouts");
+        let postdata = timeouts.to_json();
+
+        // send command
+        let res = self
+            .client
+            .post(&request_url)
+            .body(postdata.to_string())
+            .send();
+        if let Err(e) = res {
+            return Err(format!("{}", e));
+        }
+        let mut res = res.unwrap();
+
+        // read response
+        if let Ok(text) = &res.text() {
+            if let Ok(json) = json::parse(text) {
+                if json["value"].is_null() {
+                    return Ok(());
+                } else {
+                    eprintln!("{}", json.to_string());
+                    return Err("error".to_string());
+                }
+                
             } else {
                 return Err(String::from("Can't parse selenium response to json."));
             }

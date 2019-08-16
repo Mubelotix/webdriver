@@ -2,6 +2,7 @@ use webdriver::session::*;
 use webdriver::enums::*;
 use webdriver::windows::*;
 use std::rc::Rc;
+use webdriver::timeouts::*;
 
 static BROWSER: Browser = Browser::Firefox;
 
@@ -46,4 +47,25 @@ fn windows() {
 
     window2.close().unwrap();
     window1.select().unwrap();
+}
+
+#[test]
+fn timeouts() {
+    let session = Session::new(BROWSER).expect("Echec de création de la session");
+
+    let mut timeouts = session.get_timeouts().unwrap();
+    assert_eq!(Some(30000), timeouts.script);
+    assert_eq!(300000, timeouts.page_load);
+    assert_eq!(0, timeouts.implicit);
+    
+    timeouts.script = None;
+    timeouts.page_load = 299999;
+    timeouts.implicit = 1;
+
+    session.set_timeouts(timeouts).unwrap();
+
+    timeouts = session.get_timeouts().unwrap();
+    assert_eq!(None, timeouts.script);
+    assert_eq!(299999, timeouts.page_load);
+    assert_eq!(1, timeouts.implicit);
 }
