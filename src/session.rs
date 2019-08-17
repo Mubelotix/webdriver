@@ -197,7 +197,7 @@ impl<'a> Session<'a> {
         }
     }
 
-    pub fn set_timeouts(&self, timeouts: Timeouts) -> Result<(), String> {
+    pub fn set_timeouts(&mut self, timeouts: Timeouts) -> Result<(), String> {
         // build command
         let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
         if let Some(id) = self.get_id() {

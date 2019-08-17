@@ -64,7 +64,7 @@ impl<'a> Tab<'a> {
         }
     }
 
-    pub fn select(&mut self) -> Result<(), String> {
+    pub fn select(&self) -> Result<(), String> {
         // build command
         let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
         if let Some(id) = self.session.get_id() {
@@ -194,7 +194,7 @@ impl<'a> Tab<'a> {
         }
     }
 
-    pub fn find(&mut self, selector: Selector, tofind: &str) -> Result<Option<Element>, String> {
+    pub fn find(&self, selector: Selector, tofind: &str) -> Result<Option<Element>, String> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -228,7 +228,8 @@ impl<'a> Tab<'a> {
         if let Ok(text) = &res.text() {
             if let Ok(json) = json::parse(text) {
                 if json["value"]["element-6066-11e4-a52e-4f735466cecf"] != JsonValue::Null {
-                    return Ok(Some(Element::new(json["value"]["element-6066-11e4-a52e-4f735466cecf"].to_string(), self)));
+                    let inter = &*self;
+                    return Ok(Some(Element::new(json["value"]["element-6066-11e4-a52e-4f735466cecf"].to_string(), inter)));
                 } else if json["value"]["error"] != JsonValue::Null {
                     match json["value"]["error"].as_str() {
                         Some("no such element") => return Ok(None),
@@ -246,7 +247,7 @@ impl<'a> Tab<'a> {
         }
     }
 
-    pub fn get_url(&mut self) -> Result<String, String> {
+    pub fn get_url(&self) -> Result<String, String> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -288,7 +289,7 @@ impl<'a> Tab<'a> {
         }
     }
 
-    pub fn get_title(&mut self) -> Result<String, String> {
+    pub fn get_title(&self) -> Result<String, String> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);

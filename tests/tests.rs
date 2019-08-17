@@ -1,7 +1,5 @@
 use webdriver::session::*;
 use webdriver::enums::*;
-use webdriver::tab::*;
-use webdriver::timeouts::*;
 
 static BROWSER: Browser = Browser::Firefox;
 
@@ -50,7 +48,7 @@ fn windows() {
 
 #[test]
 fn timeouts() {
-    let session = Session::new(BROWSER).expect("Echec de création de la session");
+    let mut session = Session::new(BROWSER).expect("Echec de création de la session");
 
     let mut timeouts = session.get_timeouts().unwrap();
     assert_eq!(Some(30000), timeouts.script);
@@ -67,4 +65,18 @@ fn timeouts() {
     assert_eq!(None, timeouts.script);
     assert_eq!(299999, timeouts.page_load);
     assert_eq!(1, timeouts.implicit);
+}
+
+#[test]
+fn elements() {
+    let session = Session::new(BROWSER).expect("Echec de création de la session");
+
+    let mut tab = session.get_selected_tab().unwrap();
+    tab.navigate("https://www.mozilla.org/fr/").unwrap();
+
+    let mut element1 = tab.find(Selector::XPath, "//*[@id=\"id_email\"]").unwrap().unwrap();
+    let mut element2 = tab.find(Selector::XPath, "/html/body/div[3]/main/div[1]/div/aside/div[2]/form/fieldset/div/fieldset/p/label[2]").unwrap().unwrap();
+
+    element1.type_text("test@example.com").unwrap();
+    element2.click().unwrap();
 }
