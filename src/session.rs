@@ -119,6 +119,10 @@ impl<'a> Session<'a> {
     }
 
     pub fn get_selected_tab(&self) -> Result<Tab, String> {
+        Ok(Tab::new_from(self.get_selected_tab_id()?, self))
+    }
+
+    pub fn get_selected_tab_id(&self) -> Result<String, String> {
         // build command
         let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
         if let Some(id) = self.get_id() {
@@ -142,7 +146,7 @@ impl<'a> Session<'a> {
         if let Ok(text) = &res.text() {
             if let Ok(json) = json::parse(text) {
                 if json["value"] != JsonValue::Null {
-                    return Ok(Tab::new_from(json["value"].to_string(), &self));
+                    return Ok(json["value"].to_string());
                 } else {
                     eprintln!("{:?}", json);
                     return Err(String::from("Selenium returned a null result."));

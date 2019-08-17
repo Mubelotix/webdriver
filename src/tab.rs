@@ -66,8 +66,10 @@ impl<'a> Tab<'a> {
 
     pub fn select(&self) -> Result<(), String> {
         // check if it is needed to select the tab
-        if self.session.get_selected_tab()?.id == self.id {
-            return Ok(());
+        if let Ok(id) = self.session.get_selected_tab_id() {
+            if id == self.id {
+                return Ok(());
+            }
         }
 
         // build command
