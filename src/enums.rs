@@ -1,5 +1,6 @@
 use os_info::Type;
 
+#[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
 pub enum Selector {
@@ -22,6 +23,7 @@ impl Selector {
     }
 }
 
+#[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
 pub enum Browser {
@@ -38,6 +40,7 @@ impl Browser {
     }
 }
 
+#[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
 pub enum Platform {

@@ -1,5 +1,6 @@
 use json::*;
 
+#[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
 pub struct Timeouts {
