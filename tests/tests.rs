@@ -78,5 +78,6 @@ fn elements() {
     let mut element2 = tab.find(Selector::XPath, "/html/body/div[3]/main/div[1]/div/aside/div[2]/form/fieldset/div/fieldset/p/label[2]").unwrap().unwrap();
 
     element1.type_text("test@example.com").unwrap();
+    assert_eq!("Texte", element2.get_text().unwrap());
     element2.click().unwrap();
 }
