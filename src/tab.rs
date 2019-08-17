@@ -65,6 +65,11 @@ impl<'a> Tab<'a> {
     }
 
     pub fn select(&self) -> Result<(), String> {
+        // check if it is needed to select the tab
+        if self.session.get_selected_tab()?.id == self.id {
+            return Ok(());
+        }
+
         // build command
         let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
         if let Some(id) = self.session.get_id() {
