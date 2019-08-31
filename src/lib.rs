@@ -3,3 +3,4 @@ pub mod enums;
 pub mod tab;
 pub mod elements;
 pub mod timeouts;
+pub mod error;

@@ -3,6 +3,7 @@ use std::result::Result;
 use crate::elements::*;
 use crate::session::*;
 use crate::enums::*;
+use crate::error::*;
 
 pub struct Tab<'a> {
     id: String,
@@ -21,13 +22,13 @@ impl<'a> Tab<'a> {
         self.session.get_id()
     }
 
-    pub fn new(session: &'a Session) -> Result<Tab<'a>, String> {
+    pub fn new(session: &'a Session) -> Result<Tab<'a>, WebdriverError> {
         // build command
         let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
         if let Some(id) = session.get_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/window/new");
         let postdata = object! {};
@@ -38,33 +39,33 @@ impl<'a> Tab<'a> {
             .post(&request_url)
             .body(postdata.to_string())
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
 
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["value"]["handle"] != JsonValue::Null {
-                    return Ok(Tab{
-                        id: json["value"]["handle"].to_string(),
-                        session: session
-                    });
-                } else if json["value"]["error"] != JsonValue::Null {
-                    return Err(format!("{}", json["value"]["error"]));
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"]["handle"].is_string() {
+                        Ok(Tab{
+                            id: json["value"]["handle"].to_string(),
+                            session
+                        })
+                    } else if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Err(WebdriverError::InvalidResponse)
+                    }
                 } else {
-                    return Err(format!("Missing field(s) from selenium response. {}", json));
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 
-    pub fn select(&self) -> Result<(), String> {
+    pub fn select(&self) -> Result<(), WebdriverError> {
         // check if it is needed to select the tab
         if let Ok(id) = self.session.get_selected_tab_id() {
             if id == self.id {
@@ -77,7 +78,7 @@ impl<'a> Tab<'a> {
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/window");
         let postdata = object! {
@@ -90,30 +91,30 @@ impl<'a> Tab<'a> {
             .post(&request_url)
             .body(postdata.to_string())
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
-
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["value"] == JsonValue::Null {
-                    return Ok(());
-                } else if json["error"] != JsonValue::Null {
-                    return Err(json["error"].to_string());
+        
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"].is_null() {
+                        Ok(())
+                    } else if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Err(WebdriverError::InvalidResponse)
+                    }
                 } else {
-                    return Err(String::from("Selenium returned a empty response."));
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 
-    pub fn navigate(&mut self, url: &str) -> Result<(), String> {
+    pub fn navigate(&mut self, url: &str) -> Result<(), WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -124,7 +125,7 @@ impl<'a> Tab<'a> {
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/url");
         let postdata = object! {
@@ -137,30 +138,30 @@ impl<'a> Tab<'a> {
             .post(&request_url)
             .body(postdata.to_string())
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
-
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["value"] == JsonValue::Null {
-                    return Ok(());
-                } else if json["error"] != JsonValue::Null {
-                    return Err(json["error"].to_string());
+        
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"].is_null() {
+                        Ok(())
+                    } else if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Err(WebdriverError::InvalidResponse)
+                    }
                 } else {
-                    return Err(String::from("Selenium returned a empty response."));
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 
-    pub fn close(&mut self) -> Result<(), String> {
+    pub fn close(&mut self) -> Result<(), WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -171,7 +172,7 @@ impl<'a> Tab<'a> {
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/window");
 
@@ -180,28 +181,28 @@ impl<'a> Tab<'a> {
             .client
             .delete(&request_url)
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
-
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["error"] == JsonValue::Null {
-                    return Ok(());
+        
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Ok(())
+                    }
                 } else {
-                    return Err(json["error"].to_string());
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 
-    pub fn find(&self, selector: Selector, tofind: &str) -> Result<Option<Element>, String> {
+    pub fn find(&self, selector: Selector, tofind: &str) -> Result<Option<Element>, WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -212,7 +213,7 @@ impl<'a> Tab<'a> {
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/element");
         let postdata = object! {
@@ -226,35 +227,31 @@ impl<'a> Tab<'a> {
             .post(&request_url)
             .body(postdata.to_string())
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
 
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["value"]["element-6066-11e4-a52e-4f735466cecf"] != JsonValue::Null {
-                    let inter = &*self;
-                    return Ok(Some(Element::new(json["value"]["element-6066-11e4-a52e-4f735466cecf"].to_string(), inter)));
-                } else if json["value"]["error"] != JsonValue::Null {
-                    match json["value"]["error"].as_str() {
-                        Some("no such element") => return Ok(None),
-                        Some(_) => return Err("error".to_string()),
-                        None => return Err("unknow error".to_string())
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if !json["value"]["element-6066-11e4-a52e-4f735466cecf"].is_null() {
+                        let inter = &*self; // TODO
+                        Ok(Some(Element::new(json["value"]["element-6066-11e4-a52e-4f735466cecf"].to_string(), inter)))
+                    } else if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Err(WebdriverError::InvalidResponse)
                     }
                 } else {
-                    return Err(String::from("Selenium returned a empty response."));
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 
-    pub fn get_url(&self) -> Result<String, String> {
+    pub fn get_url(&self) -> Result<String, WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -265,7 +262,7 @@ impl<'a> Tab<'a> {
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/url");
 
@@ -275,28 +272,30 @@ impl<'a> Tab<'a> {
             .client
             .get(&request_url)
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
-
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["value"] != JsonValue::Null {
-                    return Ok(json["value"].to_string());
+        
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"].is_string() {
+                        Ok(json["value"].to_string())
+                    } else if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Err(WebdriverError::InvalidResponse)
+                    }
                 } else {
-                    return Err(String::from("Selenium returned a null result."));
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 
-    pub fn get_title(&self) -> Result<String, String> {
+    pub fn get_title(&self) -> Result<String, WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -307,7 +306,7 @@ impl<'a> Tab<'a> {
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/title");
 
@@ -317,28 +316,30 @@ impl<'a> Tab<'a> {
             .client
             .get(&request_url)
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
-
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["value"] != JsonValue::Null {
-                    return Ok(json["value"].to_string());
+        
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"].is_string() {
+                        Ok(json["value"].to_string())
+                    } else if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Err(WebdriverError::InvalidResponse)
+                    }
                 } else {
-                    return Err(String::from("Selenium returned a null result."));
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 
-    pub fn back(&mut self) -> Result<(), String> {
+    pub fn back(&mut self) -> Result<(), WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -349,7 +350,7 @@ impl<'a> Tab<'a> {
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/back");
         let postdata = object! {};
@@ -361,30 +362,30 @@ impl<'a> Tab<'a> {
             .post(&request_url)
             .body(postdata.to_string())
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
-
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["value"] == JsonValue::Null {
-                    return Ok(());
-                } else if json["error"] != JsonValue::Null {
-                    return Err(json["error"].to_string());
+        
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"].is_null() {
+                        Ok(())
+                    } else if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Err(WebdriverError::InvalidResponse)
+                    }
                 } else {
-                    return Err(String::from("Selenium returned a empty response."));
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 
-    pub fn forward(&mut self) -> Result<(), String> {
+    pub fn forward(&mut self) -> Result<(), WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -395,7 +396,7 @@ impl<'a> Tab<'a> {
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/forward");
         let postdata = object! {};
@@ -407,30 +408,30 @@ impl<'a> Tab<'a> {
             .post(&request_url)
             .body(postdata.to_string())
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
-
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["value"] == JsonValue::Null {
-                    return Ok(());
-                } else if json["error"] != JsonValue::Null {
-                    return Err(json["error"].to_string());
+        
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"].is_null() {
+                        Ok(())
+                    } else if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Err(WebdriverError::InvalidResponse)
+                    }
                 } else {
-                    return Err(String::from("Selenium returned a empty response."));
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 
-    pub fn refresh(&mut self) -> Result<(), String> {
+    pub fn refresh(&mut self) -> Result<(), WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -441,7 +442,7 @@ impl<'a> Tab<'a> {
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/refresh");
         let postdata = object! {};
@@ -453,30 +454,31 @@ impl<'a> Tab<'a> {
             .post(&request_url)
             .body(postdata.to_string())
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
-
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["value"] == JsonValue::Null {
-                    return Ok(());
-                } else if json["error"] != JsonValue::Null {
-                    return Err(json["error"].to_string());
+        
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"].is_null() {
+                        Ok(())
+                    } else if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Err(WebdriverError::InvalidResponse)
+                    }
                 } else {
-                    return Err(String::from("Selenium returned a empty response."));
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 }
 
+#[allow(unused_must_use)]
 impl<'a> Drop for Tab<'a> {
     fn drop(&mut self) {
         self.close();

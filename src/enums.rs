@@ -12,7 +12,7 @@ pub enum Selector {
 }
 
 impl Selector {
-    pub fn to_string(&self) -> &'static str {
+    pub fn to_string(self) -> &'static str {
         match self {
             Selector::Css => "css selector",
             Selector::XPath => "xpath",
@@ -32,7 +32,7 @@ pub enum Browser {
 }
 
 impl Browser {
-    pub fn to_string(&self) -> &'static str {
+    pub fn to_string(self) -> &'static str {
         match self {
             Browser::Firefox => "firefox",
             Browser::Chrome => "chrome"
@@ -50,7 +50,7 @@ pub enum Platform {
 }
 
 impl Platform {
-    pub fn to_string(&self) -> &'static str {
+    pub fn to_string(self) -> &'static str {
         match self {
             Platform::Linux => "linux",
             Platform::Windows => "windows",

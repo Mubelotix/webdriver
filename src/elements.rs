@@ -1,5 +1,5 @@
-pub use crate::session::*;
-pub use crate::tab::*;
+use crate::tab::*;
+use crate::error::*;
 use json::*;
 use std::result::Result;
 
@@ -16,34 +16,52 @@ impl<'a> Element<'a> {
         }
     }
 
-    pub fn type_text(&mut self, text: &str) -> Result<(), String> {
+    pub fn type_text(&mut self, text: &str) -> Result<(), WebdriverError> {
+        // select tab
+        self.tab.select()?;
+
+        // Build request
         let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
         if let Some(id) = self.tab.get_session_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/element/");
         request_url += &self.id;
         request_url.push_str("/value");
-
         let postdata = object! {
             "text" => text
         };
 
-        let mut res = self.tab.session
+        // Send request
+        let res = self.tab.session
             .client
             .post(&request_url)
             .body(postdata.to_string())
-            .send()
-            .expect("Can't send request to selenium.");
-
-        let res = json::parse(&res.text().expect("Can't read response body.")).expect("Can't parson response body to json.");
-
-        Ok(())
+            .send();
+        
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(WebdriverError::InvalidResponse)
+                }
+            } else {
+                Err(WebdriverError::InvalidResponse)
+            }
+        } else {
+            Err(WebdriverError::FailedRequest)
+        }
     }
 
-    pub fn get_text(&self) -> Result<String, String> {
+    pub fn get_text(&self) -> Result<String, WebdriverError> {
         // select tab
         self.tab.select()?;
 
@@ -52,7 +70,7 @@ impl<'a> Element<'a> {
         if let Some(id) = self.tab.get_session_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/element/");
         request_url += &self.id;
@@ -65,50 +83,71 @@ impl<'a> Element<'a> {
             .client
             .get(&request_url)
             .send();
-        if let Err(e) = res {
-            return Err(format!("{}", e));
-        }
-        let mut res = res.unwrap();
-
-        // read response
-        if let Ok(text) = &res.text() {
-            if let Ok(json) = json::parse(text) {
-                if json["value"].is_string() {
-                    return Ok(json["value"].to_string());
+        
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"].is_string() {
+                        Ok(json["value"].to_string())
+                    } else if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Err(WebdriverError::InvalidResponse)
+                    }
                 } else {
-                    return Err(String::from("error"));
+                    Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                return Err(String::from("Can't parse selenium response to json."));
+                Err(WebdriverError::InvalidResponse)
             }
         } else {
-            return Err(String::from("Can't read selenium response."));
+            Err(WebdriverError::FailedRequest)
         }
     }
 
-    pub fn click(&mut self) -> Result<(), String> {
+    pub fn click(&mut self) -> Result<(), WebdriverError> {
+        // select tab
+        self.tab.select()?;
+
+        // Build request
         let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
         if let Some(id) = self.tab.get_session_id() {
             request_url += &id;
         } else {
-            return Err(String::from("Session does not exist."));
+            return Err(WebdriverError::NoSuchWindow);
         }
         request_url.push_str("/element/");
         request_url += &self.id;
         request_url.push_str("/click");
-
         let postdata = object! {
         };
 
-        let mut res = self.tab.session
+        // Send request
+        let res = self.tab.session
             .client
             .post(&request_url)
             .body(postdata.to_string())
-            .send()
-            .expect("Can't send request to selenium.");
+            .send();
+        
 
-        let res = json::parse(&res.text().expect("Can't read response body.")).expect("Can't parson response body to json.");
-
-        Ok(())
+        // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"]["error"].is_string() {
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(WebdriverError::InvalidResponse)
+                }
+            } else {
+                Err(WebdriverError::InvalidResponse)
+            }
+        } else {
+            Err(WebdriverError::FailedRequest)
+        }
     }
 }
