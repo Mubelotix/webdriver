@@ -236,7 +236,12 @@ impl<'a> Tab<'a> {
                         let inter = &*self; // TODO
                         Ok(Some(Element::new(json["value"]["element-6066-11e4-a52e-4f735466cecf"].to_string(), inter)))
                     } else if json["value"]["error"].is_string() {
-                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                        let e = WebdriverError::from(json["value"]["error"].to_string());
+                        if e == WebdriverError::NoSuchElement {
+                            Ok(None)
+                        } else {
+                            Err(e)
+                        }
                     } else {
                         Err(WebdriverError::InvalidResponse)
                     }
