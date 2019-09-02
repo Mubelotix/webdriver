@@ -1,5 +1,3 @@
-use os_info::Type;
-
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
@@ -59,11 +57,12 @@ impl Platform {
     }
 
     pub fn current() -> Platform {
-        let info = os_info::get();
-        match info.os_type() {
-            Type::Windows => Platform::Windows,
-            Type::Linux | Type::Ubuntu | Type::Debian | Type::Fedora | Type::Redhat | Type::Arch | Type::Centos | Type::Alpine => Platform::Linux,
-            _ => Platform::Unknow,
+        if cfg!(unix) {
+            Platform::Linux
+        } else if cfg!(windows) {
+            Platform::Windows
+        } else {
+            Platform::Unknow
         }
     }
 }
