@@ -1,3 +1,5 @@
+//! Tabs allow you to control elements
+
 use json::*;
 use std::result::Result;
 use crate::elements::*;
@@ -5,6 +7,16 @@ use crate::session::*;
 use crate::enums::*;
 use crate::error::*;
 
+/// Tabs are used to load a site and get informations.
+/// 
+/// ```rust
+/// let session = Session::new(Browser::Firefox).unwrap();
+/// 
+/// // when starting a session, browser open a tab wich is selected
+/// let mut default_window = session.get_selected_tab().unwrap(); 
+/// 
+/// default_window.navigate("https://www.mozilla.org/fr/").unwrap();
+/// ```
 pub struct Tab<'a> {
     id: String,
     pub session: &'a Session<'a>
@@ -22,6 +34,7 @@ impl<'a> Tab<'a> {
         self.session.get_id()
     }
 
+    /// Create a new tab in a session.
     pub fn new(session: &'a Session) -> Result<Tab<'a>, WebdriverError> {
         // build command
         let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
@@ -65,6 +78,8 @@ impl<'a> Tab<'a> {
         }
     }
 
+    /// Select this tab.
+    /// Selection is done automatically by this crate when you get informations.
     pub fn select(&self) -> Result<(), WebdriverError> {
         // check if it is needed to select the tab
         if let Ok(id) = self.session.get_selected_tab_id() {
@@ -114,6 +129,7 @@ impl<'a> Tab<'a> {
         }
     }
 
+    /// Load a website
     pub fn navigate(&mut self, url: &str) -> Result<(), WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
@@ -161,6 +177,7 @@ impl<'a> Tab<'a> {
         }
     }
 
+    /// Close the tab.
     pub fn close(&mut self) -> Result<(), WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
@@ -202,6 +219,7 @@ impl<'a> Tab<'a> {
         }
     }
 
+    /// Find an element in the tab, selected by a [Selector](../enums/enum.Selector.html).
     pub fn find(&self, selector: Selector, tofind: &str) -> Result<Option<Element>, WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
@@ -256,6 +274,7 @@ impl<'a> Tab<'a> {
         }
     }
 
+    /// Return the url of the current web page.
     pub fn get_url(&self) -> Result<String, WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
@@ -300,6 +319,7 @@ impl<'a> Tab<'a> {
         }
     }
 
+    /// Return the title of the tab.
     pub fn get_title(&self) -> Result<String, WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
@@ -344,6 +364,7 @@ impl<'a> Tab<'a> {
         }
     }
 
+    /// Navigate to the previous page.
     pub fn back(&mut self) -> Result<(), WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
@@ -390,6 +411,7 @@ impl<'a> Tab<'a> {
         }
     }
 
+    /// Navigate forward.
     pub fn forward(&mut self) -> Result<(), WebdriverError> {
         // select tab
         if let Err(e) = self.select() {
@@ -436,6 +458,7 @@ impl<'a> Tab<'a> {
         }
     }
 
+    /// Refresh the page.
     pub fn refresh(&mut self) -> Result<(), WebdriverError> {
         // select tab
         if let Err(e) = self.select() {

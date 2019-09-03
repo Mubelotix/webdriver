@@ -1,3 +1,5 @@
+//! Sessions allow you to control tabs
+
 use json::*;
 use reqwest::Client;
 use std::time::Duration;
