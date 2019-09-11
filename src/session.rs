@@ -15,7 +15,8 @@ use std::thread;
 pub struct Session<'a> {
     id: Option<String>,
     pub client: Client,
-    pub tabs: Vec<Tab<'a>>
+    pub tabs: Vec<Tab<'a>>,
+    webdriver_process: Option<std::process::Child>,
 }
 
 impl<'a> Session<'a> {
@@ -25,23 +26,31 @@ impl<'a> Session<'a> {
         if let Err(WebdriverError::FailedRequest) = result {
             if cfg!(unix) {
                 if browser == Browser::Firefox {
-                    thread::spawn(move || {
-                        let _ = Command::new("./geckodriver")
-                            .output()
-                            .expect("Failed to start sed process");
-                    });
+                    let p = Command::new("./geckodriver")
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null())
+                        .spawn()
+                        .expect("Failed to start process");
                     thread::sleep(Duration::from_millis(100));
                     let result = Session::new_session(browser);
+                    if let Ok(mut result) = result {
+                        result.webdriver_process = Some(p);
+                        return Ok(result);
+                    }
                     return result;
                 } else {
-                    thread::spawn(move || {
-                        let _ = Command::new("./chromedriver")
-                            .arg("--port=4444")
-                            .output()
-                            .expect("Failed to start sed process");
-                    });
+                    let p = Command::new("./chromedriver")
+                        .arg("--port=4444")
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null())
+                        .spawn()
+                        .expect("Failed to start process");
                     thread::sleep(Duration::from_millis(100));
                     let result = Session::new_session(browser);
+                    if let Ok(mut result) = result {
+                        result.webdriver_process = Some(p);
+                        return Ok(result);
+                    }
                     return result;
                 }
             }
@@ -67,12 +76,13 @@ impl<'a> Session<'a> {
             return Err(WebdriverError::Custom("can't create http client.".to_string()));
         }
         let client = client.unwrap();
-        
+
         // Create session
         let mut session = Session {
             id: None,
             client,
-            tabs: Vec::new()
+            tabs: Vec::new(),
+            webdriver_process: None,
         };
         let post_data = if browser == Browser::Firefox {
             object!{
@@ -308,6 +318,14 @@ impl<'a> Session<'a> {
             }
         } else {
             Err(WebdriverError::FailedRequest)
+        }
+    }
+}
+
+impl<'a> Drop for Session<'a> {
+    fn drop(&mut self) {
+        if self.webdriver_process.is_some() {
+            self.webdriver_process.take().unwrap().kill();
         }
     }
 }
