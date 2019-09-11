@@ -109,7 +109,6 @@ impl<'a> Session<'a> {
                 }
             }
         };
-        println!("{}", post_data);
         let res = session
             .client
             .post("http://localhost:4444/session")
@@ -124,7 +123,6 @@ impl<'a> Session<'a> {
                         session.id = Some(json["value"]["sessionId"].to_string());
                         Ok(session)
                     } else if json["value"]["error"].is_string() {
-                        eprintln!("{}", json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
                         Err(WebdriverError::InvalidResponse)
