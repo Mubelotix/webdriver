@@ -2,7 +2,7 @@ use webdriver::session::*;
 use webdriver::enums::*;
 use webdriver::tab::*;
 
-static BROWSER: Browser = Browser::Firefox;
+static BROWSER: Browser = Browser::Chrome;
 
 #[test]
 fn navigation() {
@@ -66,6 +66,9 @@ fn timeouts() {
     assert_eq!(None, timeouts.script);
     assert_eq!(299_999, timeouts.page_load);
     assert_eq!(1, timeouts.implicit);
+
+    // necessary to use the close of window when variable is dropped
+    let tab = session.get_selected_tab().unwrap();
 }
 
 #[test]

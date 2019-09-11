@@ -37,7 +37,7 @@ impl<'a> Tab<'a> {
     /// Create a new tab in a session.
     pub fn new(session: &'a Session) -> Result<Tab<'a>, WebdriverError> {
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = session.get_id() {
             request_url += &id;
         } else {
@@ -89,7 +89,7 @@ impl<'a> Tab<'a> {
         }
 
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
@@ -137,7 +137,7 @@ impl<'a> Tab<'a> {
         }
 
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
@@ -185,7 +185,7 @@ impl<'a> Tab<'a> {
         }
 
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
@@ -227,7 +227,7 @@ impl<'a> Tab<'a> {
         }
 
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
@@ -282,7 +282,7 @@ impl<'a> Tab<'a> {
         }
 
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
@@ -327,7 +327,7 @@ impl<'a> Tab<'a> {
         }
 
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
@@ -372,7 +372,7 @@ impl<'a> Tab<'a> {
         }
 
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
@@ -419,7 +419,7 @@ impl<'a> Tab<'a> {
         }
 
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {
@@ -466,7 +466,7 @@ impl<'a> Tab<'a> {
         }
 
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.session.get_id() {
             request_url += &id;
         } else {

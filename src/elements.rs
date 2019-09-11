@@ -21,7 +21,7 @@ impl<'a> Element<'a> {
         self.tab.select()?;
 
         // Build request
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.tab.get_session_id() {
             request_url += &id;
         } else {
@@ -66,7 +66,7 @@ impl<'a> Element<'a> {
         self.tab.select()?;
 
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.tab.get_session_id() {
             request_url += &id;
         } else {
@@ -111,7 +111,7 @@ impl<'a> Element<'a> {
         self.tab.select()?;
 
         // Build request
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.tab.get_session_id() {
             request_url += &id;
         } else {

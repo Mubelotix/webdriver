@@ -4,10 +4,13 @@ use json::*;
 use reqwest::Client;
 use std::time::Duration;
 use std::result::Result;
+use std::io::Error;
 use crate::enums::*;
 use crate::timeouts::*;
 use crate::tab::*;
 use crate::error::*;
+use std::process::{Command, Stdio};
+use std::thread;
 
 pub struct Session<'a> {
     id: Option<String>,
@@ -17,6 +20,39 @@ pub struct Session<'a> {
 
 impl<'a> Session<'a> {
     pub fn new(browser: Browser) -> Result<Self, WebdriverError> {
+        let result = Session::new_session(browser);
+
+        if let Err(WebdriverError::FailedRequest) = result {
+            if cfg!(unix) {
+                if browser == Browser::Firefox {
+                    thread::spawn(move || {
+                        let _ = Command::new("./geckodriver")
+                            .output()
+                            .expect("Failed to start sed process");
+                    });
+                    thread::sleep(Duration::from_millis(100));
+                    let result = Session::new_session(browser);
+                    return result;
+                } else {
+                    thread::spawn(move || {
+                        let _ = Command::new("./chromedriver")
+                            .arg("--port=4444")
+                            .output()
+                            .expect("Failed to start sed process");
+                    });
+                    thread::sleep(Duration::from_millis(100));
+                    let result = Session::new_session(browser);
+                    return result;
+                }
+            }
+        } else {
+            return result;
+        }
+        
+        result
+    }
+
+    fn new_session(browser: Browser)  -> Result<Self, WebdriverError> {
         // Detect platform
         let platform = Platform::current();
         if let Platform::Unknow = platform {
@@ -38,17 +74,45 @@ impl<'a> Session<'a> {
             client,
             tabs: Vec::new()
         };
-        let post_data = object!{
-            "capabilities" => object!{
-                "alwaysMatch" => object!{
-                    "platformName" => platform.to_string(),
-                    "browserName" => browser.to_string(),
+        let post_data = if browser == Browser::Firefox {
+            object!{
+                "capabilities" => object!{
+                    "alwaysMatch" => object!{
+                        "platformName" => platform.to_string(),
+                        "browserName" => browser.to_string(),
+                        "moz:firefoxOptions" => object! {
+                            "args" => array!{"-headless"}
+                        },
+                        "moz:webdriverClick" => false,
+                    }
+                }
+            }
+        } else if browser == Browser::Chrome {
+            object!{
+                "capabilities" => object!{
+                    "alwaysMatch" => object!{
+                        "platformName" => platform.to_string(),
+                        "browserName" => browser.to_string(),
+                        "goog:chromeOptions" => object! {
+                            "args" => array!{"-headless"}
+                        }
+                    }
+                }
+            }
+        } else {
+            object!{
+                "capabilities" => object!{
+                    "alwaysMatch" => object!{
+                        "platformName" => platform.to_string(),
+                        "browserName" => browser.to_string()
+                    }
                 }
             }
         };
+        println!("{}", post_data);
         let res = session
             .client
-            .post("http://localhost:4444/wd/hub/session")
+            .post("http://localhost:4444/session")
             .body(post_data.to_string())
             .send();
 
@@ -60,6 +124,7 @@ impl<'a> Session<'a> {
                         session.id = Some(json["value"]["sessionId"].to_string());
                         Ok(session)
                     } else if json["value"]["error"].is_string() {
+                        eprintln!("{}", json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
                         Err(WebdriverError::InvalidResponse)
@@ -81,7 +146,7 @@ impl<'a> Session<'a> {
 
     pub fn get_all_tabs(&self) -> Result<Vec<Tab>, WebdriverError> {
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.get_id() {
             request_url += &id;
         } else {
@@ -130,7 +195,7 @@ impl<'a> Session<'a> {
 
     pub fn get_selected_tab_id(&self) -> Result<String, WebdriverError> {
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.get_id() {
             request_url += &id;
         } else {
@@ -168,7 +233,7 @@ impl<'a> Session<'a> {
 
     pub fn get_timeouts(&self) -> Result<Timeouts, WebdriverError> {
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.get_id() {
             request_url += &id;
         } else {
@@ -210,7 +275,7 @@ impl<'a> Session<'a> {
 
     pub fn set_timeouts(&mut self, timeouts: Timeouts) -> Result<(), WebdriverError> {
         // build command
-        let mut request_url = String::from("http://localhost:4444/wd/hub/session/");
+        let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.get_id() {
             request_url += &id;
         } else {
