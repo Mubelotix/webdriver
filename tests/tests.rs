@@ -2,7 +2,7 @@ use webdriver::session::*;
 use webdriver::enums::*;
 use webdriver::tab::*;
 
-static BROWSER: Browser = Browser::Firefox;
+static BROWSER: Browser = Browser::Chrome;
 
 #[test]
 fn navigation() {

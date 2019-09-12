@@ -85,30 +85,54 @@ impl<'a> Session<'a> {
             webdriver_process: None,
         };
         let post_data = if browser == Browser::Firefox {
-            object!{
-                "capabilities" => object!{
-                    "alwaysMatch" => object!{
-                        "platformName" => platform.to_string(),
-                        "browserName" => browser.to_string(),
-                        "moz:firefoxOptions" => object! {
-                            "args" => array!{"-headless"}
-                        },
-                        "moz:webdriverClick" => false,
+            if cfg!(debug_assertions) {
+                object!{
+                    "capabilities" => object!{
+                        "alwaysMatch" => object!{
+                            "platformName" => platform.to_string(),
+                            "browserName" => browser.to_string(),
+                            "moz:webdriverClick" => false,
+                        }
                     }
                 }
-            }
-        } else if browser == Browser::Chrome {
-            object!{
-                "capabilities" => object!{
-                    "alwaysMatch" => object!{
-                        "platformName" => platform.to_string(),
-                        "browserName" => browser.to_string(),
-                        "goog:chromeOptions" => object! {
-                            "args" => array!{"-headless"}
+            } else {
+                object!{
+                    "capabilities" => object!{
+                        "alwaysMatch" => object!{
+                            "platformName" => platform.to_string(),
+                            "browserName" => browser.to_string(),
+                            "moz:firefoxOptions" => object! {
+                                "args" => array!{"-headless"}
+                            },
+                            "moz:webdriverClick" => false,
                         }
                     }
                 }
             }
+        } else if browser == Browser::Chrome {
+            if cfg!(debug_assertions) {
+                object!{
+                    "capabilities" => object!{
+                        "alwaysMatch" => object!{
+                            "platformName" => platform.to_string(),
+                            "browserName" => browser.to_string()
+                        }
+                    }
+                }
+            } else {
+                object!{
+                    "capabilities" => object!{
+                        "alwaysMatch" => object!{
+                            "platformName" => platform.to_string(),
+                            "browserName" => browser.to_string(),
+                            "goog:chromeOptions" => object! {
+                                "args" => array!{"-headless"}
+                            }
+                        }
+                    }
+                }
+            }
+            
         } else {
             object!{
                 "capabilities" => object!{
