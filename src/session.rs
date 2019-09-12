@@ -92,7 +92,8 @@ impl<'a> Session<'a> {
                             "platformName" => platform.to_string(),
                             "browserName" => browser.to_string(),
                             "moz:webdriverClick" => false,
-                        }
+                        },
+                        "moz:webdriverClick" => false,
                     }
                 }
             } else {
@@ -104,8 +105,9 @@ impl<'a> Session<'a> {
                             "moz:firefoxOptions" => object! {
                                 "args" => array!{"-headless"}
                             },
-                            "moz:webdriverClick" => false,
-                        }
+                            
+                        },
+                        "moz:webdriverClick" => false,
                     }
                 }
             }
