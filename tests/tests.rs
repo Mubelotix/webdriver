@@ -1,12 +1,13 @@
 use webdriver::session::*;
 use webdriver::enums::*;
 use webdriver::tab::*;
+use std::{thread, time::Duration};
 
-static BROWSER: Browser = Browser::Chrome;
+static BROWSER: Browser = Browser::Firefox;
 
 #[test]
 fn navigation() {
-    env_logger::init();
+    //env_logger::init();
     let session = Session::new(BROWSER).expect("Echec de création de la session");
     let mut tab = session.get_selected_tab().unwrap();
     tab.navigate("http://example.com/").unwrap();
@@ -23,6 +24,7 @@ fn navigation() {
 
 #[test]
 fn getters() {
+    //env_logger::init();
     let session = Session::new(BROWSER).expect("Echec de création de la session");
     let mut tab = session.get_selected_tab().unwrap();
     tab.navigate("http://example.com/").unwrap();
@@ -32,6 +34,7 @@ fn getters() {
 
 #[test]
 fn windows() {
+    //env_logger::init();
     let session = Session::new(BROWSER).expect("Echec de création de la session");
 
     let mut window1 = session.get_selected_tab().unwrap();
@@ -50,6 +53,7 @@ fn windows() {
 
 #[test]
 fn timeouts() {
+    //env_logger::init();
     let mut session = Session::new(BROWSER).expect("Echec de création de la session");
 
     let mut timeouts = session.get_timeouts().unwrap();
@@ -74,6 +78,7 @@ fn timeouts() {
 
 #[test]
 fn elements() {
+    //env_logger::init();
     let session = Session::new(BROWSER).expect("Echec de création de la session");
 
     let mut tab = session.get_selected_tab().unwrap();
@@ -85,4 +90,31 @@ fn elements() {
     element1.type_text("test@example.com").unwrap();
     assert_eq!("Texte", element2.get_text().unwrap());
     element2.click().unwrap();
+}
+
+#[test]
+fn execute_javascript() {
+    //env_logger::init();
+    let session = Session::new(BROWSER).expect("Echec de création de la session");
+
+    let mut tab = session.get_selected_tab().unwrap();
+    tab.navigate("http://example.com").unwrap();
+    thread::sleep(Duration::from_secs(1));
+    
+    tab.execute_script("document.querySelector(arguments[0]).click();", vec!["html>body>div>p>a"]).unwrap();
+
+    thread::sleep(Duration::from_secs(10));
+}
+
+#[test]
+fn element_obscured() {
+    //env_logger::init();
+    let session = Session::new(BROWSER).expect("Echec de création de la session");
+
+    let mut tab = session.get_selected_tab().unwrap();
+    tab.navigate("https://mubelotix.dev/webdriver_tests/element_obscured.html").unwrap();
+    
+    let mut element = tab.find(Selector::XPath, "/html/body/p/a").unwrap().unwrap();
+    element.click().unwrap();
+    thread::sleep(Duration::from_secs(3));
 }

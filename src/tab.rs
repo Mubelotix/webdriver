@@ -96,8 +96,6 @@ impl<'a> Tab<'a> {
             }
         }
 
-        info!("Selecting tab...");
-
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = self.session.get_id() {
@@ -248,7 +246,7 @@ impl<'a> Tab<'a> {
     }
 
     /// Find an element in the tab, selected by a [Selector](../enums/enum.Selector.html).
-    pub fn find(&self, selector: Selector, tofind: &str) -> Result<Option<Element>, WebdriverError> {
+    pub fn find(&self, selector: Selector, tofind: &'a str) -> Result<Option<Element>, WebdriverError> {
         info!("Finding {} with selector {}", tofind, selector.to_string());
 
         // select tab
@@ -282,7 +280,7 @@ impl<'a> Tab<'a> {
                 if let Ok(json) = json::parse(text) {
                     if !json["value"]["element-6066-11e4-a52e-4f735466cecf"].is_null() {
                         let inter = &*self; // TODO
-                        Ok(Some(Element::new(json["value"]["element-6066-11e4-a52e-4f735466cecf"].to_string(), inter)))
+                        Ok(Some(Element::new(json["value"]["element-6066-11e4-a52e-4f735466cecf"].to_string(), inter, (selector, tofind))))
                     } else if json["value"]["error"].is_string() {
                         let e = WebdriverError::from(json["value"]["error"].to_string());
                         error!("{:?}, response: {}", e, json);
@@ -549,6 +547,63 @@ impl<'a> Tab<'a> {
             .send();
         
         // Read response
+        if let Ok(mut res) = res {
+            if let Ok(text) = &res.text() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"].is_null() {
+                        Ok(())
+                    } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
+                        Err(WebdriverError::InvalidResponse)
+                    }
+                } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
+                    Err(WebdriverError::InvalidResponse)
+                }
+            } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                Err(WebdriverError::InvalidResponse)
+            }
+        } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
+            Err(WebdriverError::FailedRequest)
+        }
+    }
+
+    // TODO mutability
+    pub fn execute_script(&self, script: &str, args: Vec<&str>) -> Result<(), WebdriverError> {
+        info!("Executing javascript script...");
+
+        // select tab
+        if let Err(e) = self.select() {
+            return Err(e);
+        }
+
+        // build command
+        let mut request_url = String::from("http://localhost:4444/session/");
+        if let Some(id) = self.session.get_id() {
+            request_url += &id;
+        } else {
+            return Err(WebdriverError::NoSuchWindow);
+        }
+        request_url.push_str("/execute/sync");
+        let postdata = object!{
+            "script" => script,
+            "args" => args
+        };
+
+        // send command
+        let res = self
+            .session
+            .client
+            .post(&request_url)
+            .body(postdata.to_string())
+            .send();
+        
+        // Read error
         if let Ok(mut res) = res {
             if let Ok(text) = &res.text() {
                 if let Ok(json) = json::parse(text) {
