@@ -6,6 +6,7 @@ static BROWSER: Browser = Browser::Chrome;
 
 #[test]
 fn navigation() {
+    env_logger::init();
     let session = Session::new(BROWSER).expect("Echec de création de la session");
     let mut tab = session.get_selected_tab().unwrap();
     tab.navigate("http://example.com/").unwrap();

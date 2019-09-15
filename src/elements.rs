@@ -2,6 +2,7 @@ use crate::tab::*;
 use crate::error::*;
 use json::*;
 use std::result::Result;
+use log::{info, warn, error};
 
 pub struct Element<'a> {
     id: String,
@@ -17,6 +18,8 @@ impl<'a> Element<'a> {
     }
 
     pub fn type_text(&mut self, text: &str) -> Result<(), WebdriverError> {
+        info!("Sending \"{}\" to element...", text);
+
         // select tab
         self.tab.select()?;
 
@@ -46,22 +49,28 @@ impl<'a> Element<'a> {
             if let Ok(text) = &res.text() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
                         Ok(())
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
 
     pub fn get_text(&self) -> Result<String, WebdriverError> {
+        info!("Getting text of element...");
+
         // select tab
         self.tab.select()?;
 
@@ -91,22 +100,29 @@ impl<'a> Element<'a> {
                     if json["value"].is_string() {
                         Ok(json["value"].to_string())
                     } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
                         Err(WebdriverError::InvalidResponse)
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
 
     pub fn click(&mut self) -> Result<(), WebdriverError> {
+        info!("Clicking on element...");
+
         // select tab
         self.tab.select()?;
 
@@ -136,17 +152,21 @@ impl<'a> Element<'a> {
             if let Ok(text) = &res.text() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
                         Ok(())
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }

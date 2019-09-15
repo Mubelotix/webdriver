@@ -6,6 +6,7 @@ use crate::elements::*;
 use crate::session::*;
 use crate::enums::*;
 use crate::error::*;
+use log::{info, warn, error};
 
 /// Tabs are used to load a site and get informations.
 /// 
@@ -36,6 +37,8 @@ impl<'a> Tab<'a> {
 
     /// Create a new tab in a session.
     pub fn new(session: &'a Session) -> Result<Tab<'a>, WebdriverError> {
+        info!("Creating tab...");
+
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
         if let Some(id) = session.get_id() {
@@ -63,17 +66,22 @@ impl<'a> Tab<'a> {
                             session
                         })
                     } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
                         Err(WebdriverError::InvalidResponse)
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
@@ -87,6 +95,8 @@ impl<'a> Tab<'a> {
                 return Ok(());
             }
         }
+
+        info!("Selecting tab...");
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
@@ -114,23 +124,30 @@ impl<'a> Tab<'a> {
                     if json["value"].is_null() {
                         Ok(())
                     } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
                         Err(WebdriverError::InvalidResponse)
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
 
     /// Load a website
     pub fn navigate(&mut self, url: &str) -> Result<(), WebdriverError> {
+        info!("Navigating to {}...", url);
+
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -162,23 +179,30 @@ impl<'a> Tab<'a> {
                     if json["value"].is_null() {
                         Ok(())
                     } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
                         Err(WebdriverError::InvalidResponse)
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
 
     /// Close the tab.
     pub fn close(&mut self) -> Result<(), WebdriverError> {
+        info!("Closing tab...");
+
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -204,23 +228,29 @@ impl<'a> Tab<'a> {
             if let Ok(text) = &res.text() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
                         Ok(())
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
 
     /// Find an element in the tab, selected by a [Selector](../enums/enum.Selector.html).
     pub fn find(&self, selector: Selector, tofind: &str) -> Result<Option<Element>, WebdriverError> {
+        info!("Finding {} with selector {}", tofind, selector.to_string());
+
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -255,27 +285,34 @@ impl<'a> Tab<'a> {
                         Ok(Some(Element::new(json["value"]["element-6066-11e4-a52e-4f735466cecf"].to_string(), inter)))
                     } else if json["value"]["error"].is_string() {
                         let e = WebdriverError::from(json["value"]["error"].to_string());
+                        error!("{:?}, response: {}", e, json);
                         if e == WebdriverError::NoSuchElement {
                             Ok(None)
                         } else {
                             Err(e)
                         }
                     } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
                         Err(WebdriverError::InvalidResponse)
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
 
     /// Return the url of the current web page.
     pub fn get_url(&self) -> Result<String, WebdriverError> {
+        info!("Getting url...");
+
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -304,23 +341,30 @@ impl<'a> Tab<'a> {
                     if json["value"].is_string() {
                         Ok(json["value"].to_string())
                     } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
                         Err(WebdriverError::InvalidResponse)
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
 
     /// Return the title of the tab.
     pub fn get_title(&self) -> Result<String, WebdriverError> {
+        info!("Getting title...");
+
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -349,23 +393,30 @@ impl<'a> Tab<'a> {
                     if json["value"].is_string() {
                         Ok(json["value"].to_string())
                     } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
                         Err(WebdriverError::InvalidResponse)
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
 
     /// Navigate to the previous page.
     pub fn back(&mut self) -> Result<(), WebdriverError> {
+        info!("Navigating backward...");
+
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -396,23 +447,30 @@ impl<'a> Tab<'a> {
                     if json["value"].is_null() {
                         Ok(())
                     } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
                         Err(WebdriverError::InvalidResponse)
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
 
     /// Navigate forward.
     pub fn forward(&mut self) -> Result<(), WebdriverError> {
+        info!("Navigating forward...");
+
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -443,23 +501,30 @@ impl<'a> Tab<'a> {
                     if json["value"].is_null() {
                         Ok(())
                     } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
                         Err(WebdriverError::InvalidResponse)
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
 
     /// Refresh the page.
     pub fn refresh(&mut self) -> Result<(), WebdriverError> {
+        info!("Refreshing tab...");
+
         // select tab
         if let Err(e) = self.select() {
             return Err(e);
@@ -490,17 +555,22 @@ impl<'a> Tab<'a> {
                     if json["value"].is_null() {
                         Ok(())
                     } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
                     } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
                         Err(WebdriverError::InvalidResponse)
                     }
                 } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
     }
