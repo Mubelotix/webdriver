@@ -35,7 +35,7 @@ impl<'a> Session<'a> {
                         .stderr(Stdio::null())
                         .spawn()
                         .expect("Failed to start process.");
-                    thread::sleep(Duration::from_millis(100));
+                    thread::sleep(Duration::from_millis(150));
                     let result = Session::new_session(browser);
                     if let Ok(mut result) = result {
                         info!{"Session created successfully."}
@@ -48,6 +48,43 @@ impl<'a> Session<'a> {
                 } else {
                     info!{"Launching chromedriver..."}
                     let p = Command::new("./chromedriver")
+                        .arg("--port=4444")
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null())
+                        .spawn()
+                        .expect("Failed to start process");
+                    thread::sleep(Duration::from_millis(200));
+                    let result = Session::new_session(browser);
+                    if let Ok(mut result) = result {
+                        info!{"Session created successfully."}
+                        result.webdriver_process = Some(p);
+                        return Ok(result);
+                    } else if let Err(e) = result{
+                        error!("Failed to create session. error : {:?}.", e);
+                        return Err(e);
+                    }
+                }
+            } else if cfg!(windows) {
+                if browser == Browser::Firefox {
+                    info!{"Launching geckodriver..."}
+                    let p = Command::new("geckodriver.exe")
+                        .stdout(Stdio::null())
+                        .stderr(Stdio::null())
+                        .spawn()
+                        .expect("Failed to start process.");
+                    thread::sleep(Duration::from_millis(100));
+                    let result = Session::new_session(browser);
+                    if let Ok(mut result) = result {
+                        info!{"Session created successfully."}
+                        result.webdriver_process = Some(p);
+                        return Ok(result);
+                    } else if let Err(e) = result{
+                        error!("Failed to create session. error : {:?}.", e);
+                        return Err(e);
+                    }
+                } else {
+                    info!{"Launching chromedriver..."}
+                    let p = Command::new("chromedriver.exe")
                         .arg("--port=4444")
                         .stdout(Stdio::null())
                         .stderr(Stdio::null())
