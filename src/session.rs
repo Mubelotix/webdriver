@@ -193,6 +193,9 @@ impl<'a> Session<'a> {
                 }
             }
         };
+
+        info!("Creating session... capabilities = {}", post_data);
+        
         let res = session
             .client
             .post("http://localhost:4444/session")
