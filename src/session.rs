@@ -67,7 +67,7 @@ impl<'a> Session<'a> {
             } else if cfg!(windows) {
                 if browser == Browser::Firefox {
                     info!{"Launching geckodriver..."}
-                    let p = Command::new("geckodriver.exe")
+                    let p = Command::new(".\\geckodriver.exe")
                         .stdout(Stdio::null())
                         .stderr(Stdio::null())
                         .spawn()
@@ -84,7 +84,7 @@ impl<'a> Session<'a> {
                     }
                 } else {
                     info!{"Launching chromedriver..."}
-                    let p = Command::new("chromedriver.exe")
+                    let p = Command::new(".\\chromedriver.exe")
                         .arg("--port=4444")
                         .stdout(Stdio::null())
                         .stderr(Stdio::null())
