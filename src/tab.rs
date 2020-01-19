@@ -604,10 +604,3 @@ impl<'a> Tab<'a> {
         }
     }
 }
-
-#[allow(unused_must_use)]
-impl<'a> Drop for Tab<'a> {
-    fn drop(&mut self) {
-        self.close();
-    }
-}
