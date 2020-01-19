@@ -11,7 +11,9 @@ use log::{info, warn, error};
 /// Tabs are used to load a site and get informations.
 /// 
 /// ```rust
-/// let session = Session::new(Browser::Firefox).unwrap();
+/// # use lw_webdriver::{session::Session, enums::Browser};
+/// 
+/// let session = Session::new(Browser::Firefox, false).unwrap();
 /// 
 /// // when starting a session, browser open a tab wich is selected
 /// let mut default_window = session.get_selected_tab().unwrap(); 
