@@ -191,13 +191,13 @@ impl Session {
         if let Ok(res) = res {
             if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
-                    if !json["value"]["handles"].is_null() {
+                    if !json["value"].is_null() {
                         let mut tabs: Vec<Tab> = Vec::new();
                         tabs.clear();
                         let mut i = 0;
-                        while !json["value"]["handles"][i].is_null() {
+                        while !json["value"][i].is_null() {
                             i += 1;
-                            tabs.push(Tab::new_from(json["value"]["handles"][i].to_string(), &self));
+                            tabs.push(Tab::new_from(json["value"][i].to_string(), &self));
                         }
                         Ok(tabs)
                     } else if json["value"]["error"].is_string() {
