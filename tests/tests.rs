@@ -1,6 +1,6 @@
-use webdriver::session::*;
-use webdriver::enums::*;
-use webdriver::tab::*;
+use webdriver_client::session::*;
+use webdriver_client::enums::*;
+use webdriver_client::tab::*;
 use std::{thread, time::Duration};
 
 static BROWSER: Browser = Browser::Firefox;
@@ -8,7 +8,7 @@ static BROWSER: Browser = Browser::Firefox;
 #[test]
 fn navigation() {
     //env_logger::init();
-    let session = Session::new(BROWSER).expect("Echec de création de la session");
+    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
     let mut tab = session.get_selected_tab().unwrap();
     tab.navigate("http://example.com/").unwrap();
     assert_eq!(tab.get_url().unwrap(), String::from("http://example.com/"));
@@ -25,7 +25,7 @@ fn navigation() {
 #[test]
 fn getters() {
     //env_logger::init();
-    let session = Session::new(BROWSER).expect("Echec de création de la session");
+    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
     let mut tab = session.get_selected_tab().unwrap();
     tab.navigate("http://example.com/").unwrap();
     assert_eq!(tab.get_url().unwrap(), String::from("http://example.com/"));
@@ -35,7 +35,7 @@ fn getters() {
 #[test]
 fn windows() {
     //env_logger::init();
-    let session = Session::new(BROWSER).expect("Echec de création de la session");
+    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
 
     let mut window1 = session.get_selected_tab().unwrap();
     window1.navigate("https://www.mozilla.org/fr/").unwrap();
@@ -54,7 +54,7 @@ fn windows() {
 #[test]
 fn timeouts() {
     //env_logger::init();
-    let mut session = Session::new(BROWSER).expect("Echec de création de la session");
+    let mut session = Session::new(BROWSER, false).expect("Echec de création de la session");
 
     let mut timeouts = session.get_timeouts().unwrap();
     assert_eq!(Some(30000), timeouts.script);
@@ -79,7 +79,7 @@ fn timeouts() {
 #[test]
 fn elements() {
     //env_logger::init();
-    let session = Session::new(BROWSER).expect("Echec de création de la session");
+    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
 
     let mut tab = session.get_selected_tab().unwrap();
     tab.navigate("https://www.mozilla.org/fr/").unwrap();
@@ -95,7 +95,7 @@ fn elements() {
 #[test]
 fn execute_javascript() {
     //env_logger::init();
-    let session = Session::new(BROWSER).expect("Echec de création de la session");
+    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
 
     let mut tab = session.get_selected_tab().unwrap();
     tab.navigate("http://example.com").unwrap();
@@ -108,8 +108,8 @@ fn execute_javascript() {
 
 #[test]
 fn element_obscured() {
-    //env_logger::init();
-    let session = Session::new(BROWSER).expect("Echec de création de la session");
+    env_logger::init();
+    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
 
     let mut tab = session.get_selected_tab().unwrap();
     tab.navigate("https://mubelotix.dev/webdriver_tests/element_obscured.html").unwrap();

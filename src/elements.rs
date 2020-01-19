@@ -41,15 +41,13 @@ impl<'a> Element<'a> {
         };
 
         // Send request
-        let res = self.tab.session
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["error"].is_string() {
                         error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
@@ -62,7 +60,7 @@ impl<'a> Element<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -89,16 +87,12 @@ impl<'a> Element<'a> {
         request_url.push_str("/text");
 
         // send command
-        let res = self
-            .tab
-            .session
-            .client
-            .get(&request_url)
+        let res = minreq::get(&request_url)
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_string() {
                         Ok(json["value"].to_string())
@@ -114,7 +108,7 @@ impl<'a> Element<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -127,12 +121,12 @@ impl<'a> Element<'a> {
         info!("Clicking on element...");
         
         // TODO watch the bug
-        warn!("Using javascript click because of a bug in geckodriver where and error hapen but is not reported to us.");
+        /*warn!("Using javascript click because of a bug in geckodriver where and error hapen but is not reported to us.");
         if let Ok(()) = self.tab.execute_script("var element = document.evaluate(arguments[0], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;element.click();", vec![self.stored_selector.1]) {
             return Ok(());
         } else {
             error!("Failed to click with javascript. Using normal method.");
-        }
+        }*/
 
         // select tab
         debug!("Selecting tab");
@@ -154,16 +148,14 @@ impl<'a> Element<'a> {
 
         // Send request
         debug!("Sending request");
-        let res = self.tab.session
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
         
         // Read response
         debug!("Reading response");
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["error"].is_string() {
                         let e = WebdriverError::from(json["value"]["error"].to_string());
@@ -172,12 +164,11 @@ impl<'a> Element<'a> {
 
                             match self.stored_selector.0 {
                                 Selector::XPath => {
-                                    if let Ok(()) = self.tab.execute_script("var element = document.evaluate(arguments[0], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue();const mouseoverEvent = new Event('mouseover');element.dispatchEvent(mouseoverEvent);element.click();", vec![self.stored_selector.1]) {
-                                        info!("Error handled successfully !");
+                                    if let Ok(()) = self.tab.execute_script("var element = document.evaluate(arguments[0], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;element.click();", vec![self.stored_selector.1]) {
+                                        info!("Successfully clicked with javascript.");
                                         return Ok(());
                                     } else {
-                                        error!("Failed to click with javascript too.");
-                                        return Err(WebdriverError::ElementClickIntercepted);
+                                        error!("Failed to click with javascript.");
                                     }
                                 },
                                 _ => error!("unimplemented selector {}", self.stored_selector.0.to_string()),
@@ -194,7 +185,7 @@ impl<'a> Element<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {

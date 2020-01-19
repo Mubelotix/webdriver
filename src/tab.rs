@@ -20,7 +20,7 @@ use log::{info, warn, error};
 /// ```
 pub struct Tab<'a> {
     id: String,
-    pub session: &'a Session<'a>
+    pub session: &'a Session
 }
 
 impl<'a> Tab<'a> {
@@ -50,15 +50,13 @@ impl<'a> Tab<'a> {
         let postdata = object! {};
 
         // send command
-        let res = session
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
 
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["handle"].is_string() {
                         Ok(Tab{
@@ -77,7 +75,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -109,15 +107,13 @@ impl<'a> Tab<'a> {
         };
 
         // send command
-        let res = self.session
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_null() {
                         Ok(())
@@ -133,7 +129,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -164,15 +160,13 @@ impl<'a> Tab<'a> {
         };
 
         // send command
-        let res = self.session
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_null() {
                         Ok(())
@@ -188,7 +182,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -216,14 +210,12 @@ impl<'a> Tab<'a> {
         request_url.push_str("/window");
 
         // send command
-        let res = self.session
-            .client
-            .delete(&request_url)
+        let res = minreq::delete(&request_url)
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["error"].is_string() {
                         error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
@@ -236,7 +228,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -268,15 +260,13 @@ impl<'a> Tab<'a> {
         };
 
         // send command
-        let res = self.session
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
 
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if !json["value"]["element-6066-11e4-a52e-4f735466cecf"].is_null() {
                         let inter = &*self; // TODO
@@ -298,7 +288,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -326,15 +316,12 @@ impl<'a> Tab<'a> {
         request_url.push_str("/url");
 
         // send command
-        let res = self
-            .session
-            .client
-            .get(&request_url)
+        let res = minreq::get(&request_url)
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_string() {
                         Ok(json["value"].to_string())
@@ -350,7 +337,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -378,15 +365,12 @@ impl<'a> Tab<'a> {
         request_url.push_str("/title");
 
         // send command
-        let res = self
-            .session
-            .client
-            .get(&request_url)
+        let res = minreq::get(&request_url)
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_string() {
                         Ok(json["value"].to_string())
@@ -402,7 +386,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -431,16 +415,13 @@ impl<'a> Tab<'a> {
         let postdata = object! {};
 
         // send command
-        let res = self
-            .session
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_null() {
                         Ok(())
@@ -456,7 +437,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -485,16 +466,13 @@ impl<'a> Tab<'a> {
         let postdata = object! {};
 
         // send command
-        let res = self
-            .session
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_null() {
                         Ok(())
@@ -510,7 +488,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -539,16 +517,13 @@ impl<'a> Tab<'a> {
         let postdata = object! {};
 
         // send command
-        let res = self
-            .session
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_null() {
                         Ok(())
@@ -564,7 +539,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -596,16 +571,13 @@ impl<'a> Tab<'a> {
         };
 
         // send command
-        let res = self
-            .session
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
         
         // Read error
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_null() {
                         Ok(())
@@ -621,7 +593,7 @@ impl<'a> Tab<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {

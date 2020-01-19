@@ -38,6 +38,10 @@ impl Browser {
     }
 }
 
+struct Options {
+    headless: bool
+}
+
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]

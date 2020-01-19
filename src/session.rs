@@ -1,10 +1,8 @@
 //! Sessions allow you to control tabs
 
 use json::*;
-use reqwest::Client;
 use std::time::Duration;
 use std::result::Result;
-use std::io::Error;
 use crate::enums::*;
 use crate::timeouts::*;
 use crate::tab::*;
@@ -13,17 +11,15 @@ use std::process::{Command, Stdio};
 use std::thread;
 use log::{info, warn, error};
 
-pub struct Session<'a> {
+pub struct Session {
     id: Option<String>,
-    pub client: Client,
-    pub tabs: Vec<Tab<'a>>,
     webdriver_process: Option<std::process::Child>,
 }
 
-impl<'a> Session<'a> {
-    pub fn new(browser: Browser) -> Result<Self, WebdriverError> {
+impl Session {
+    pub fn new(browser: Browser, headless: bool) -> Result<Self, WebdriverError> {
         info!{"Creating a session..."};
-        let result = Session::new_session(browser);
+        let result = Session::new_session(browser, headless);
 
         if let Err(WebdriverError::FailedRequest) = result {
             warn!{"No webdriver launched."}
@@ -35,13 +31,13 @@ impl<'a> Session<'a> {
                         .stderr(Stdio::null())
                         .spawn()
                         .expect("Failed to start process.");
-                    thread::sleep(Duration::from_millis(150));
-                    let result = Session::new_session(browser);
+                    thread::sleep(Duration::from_millis(2000));
+                    let result = Session::new_session(browser, headless);
                     if let Ok(mut result) = result {
                         info!{"Session created successfully."}
                         result.webdriver_process = Some(p);
                         return Ok(result);
-                    } else if let Err(e) = result{
+                    } else if let Err(e) = result {
                         error!("Failed to create session. error : {:?}.", e);
                         return Err(e);
                     }
@@ -53,8 +49,8 @@ impl<'a> Session<'a> {
                         .stderr(Stdio::null())
                         .spawn()
                         .expect("Failed to start process");
-                    thread::sleep(Duration::from_millis(200));
-                    let result = Session::new_session(browser);
+                    thread::sleep(Duration::from_millis(2000));
+                    let result = Session::new_session(browser, headless);
                     if let Ok(mut result) = result {
                         info!{"Session created successfully."}
                         result.webdriver_process = Some(p);
@@ -64,43 +60,8 @@ impl<'a> Session<'a> {
                         return Err(e);
                     }
                 }
-            } else if cfg!(windows) {
-                if browser == Browser::Firefox {
-                    info!{"Launching geckodriver..."}
-                    let p = Command::new(".\\geckodriver.exe")
-                        .stdout(Stdio::null())
-                        .stderr(Stdio::null())
-                        .spawn()
-                        .expect("Failed to start process.");
-                    thread::sleep(Duration::from_millis(100));
-                    let result = Session::new_session(browser);
-                    if let Ok(mut result) = result {
-                        info!{"Session created successfully."}
-                        result.webdriver_process = Some(p);
-                        return Ok(result);
-                    } else if let Err(e) = result{
-                        error!("Failed to create session. error : {:?}.", e);
-                        return Err(e);
-                    }
-                } else {
-                    info!{"Launching chromedriver..."}
-                    let p = Command::new(".\\chromedriver.exe")
-                        .arg("--port=4444")
-                        .stdout(Stdio::null())
-                        .stderr(Stdio::null())
-                        .spawn()
-                        .expect("Failed to start process");
-                    thread::sleep(Duration::from_millis(200));
-                    let result = Session::new_session(browser);
-                    if let Ok(mut result) = result {
-                        info!{"Session created successfully."}
-                        result.webdriver_process = Some(p);
-                        return Ok(result);
-                    } else if let Err(e) = result{
-                        error!("Failed to create session. error : {:?}.", e);
-                        return Err(e);
-                    }
-                }
+            } else {
+                panic!("Please launch the webdriver manually.")
             }
         } else {
             return result;
@@ -109,86 +70,64 @@ impl<'a> Session<'a> {
         result
     }
 
-    fn new_session(browser: Browser)  -> Result<Self, WebdriverError> {
+    fn new_session(browser: Browser, headless: bool)  -> Result<Self, WebdriverError> {
         // Detect platform
         let platform = Platform::current();
         if let Platform::Unknow = platform {
             return Err(WebdriverError::UnsupportedPlatform);
         }
 
-        // Create http client
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
-            .build();
-        if client.is_err() {
-            return Err(WebdriverError::Custom("can't create http client.".to_string()));
-        }
-        let client = client.unwrap();
-
         // Create session
         let mut session = Session {
             id: None,
-            client,
-            tabs: Vec::new(),
             webdriver_process: None,
         };
-        let post_data = if browser == Browser::Firefox {
-            if cfg!(debug_assertions) {
-                object!{
-                    "capabilities" => object!{
-                        "alwaysMatch" => object!{
-                            "platformName" => platform.to_string(),
-                            "browserName" => browser.to_string(),
-                            "moz:webdriverClick" => false,
-                        },
-                        "moz:webdriverClick" => false,
-                    }
-                }
-            } else {
-                object!{
-                    "capabilities" => object!{
-                        "alwaysMatch" => object!{
-                            "platformName" => platform.to_string(),
-                            "browserName" => browser.to_string(),
-                            "moz:firefoxOptions" => object! {
-                                "args" => array!{"-headless"}
-                            },
-                            
-                        },
-                        "moz:webdriverClick" => false,
-                    }
-                }
-            }
-        } else if browser == Browser::Chrome {
-            if cfg!(debug_assertions) {
-                object!{
-                    "capabilities" => object!{
-                        "alwaysMatch" => object!{
-                            "platformName" => platform.to_string(),
-                            "browserName" => browser.to_string()
+        let post_data = match browser {
+            Browser::Firefox => {
+                if headless {
+                    object!{
+                        "capabilities" => object!{
+                            "alwaysMatch" => object!{
+                                "platformName" => platform.to_string(),
+                                "browserName" => browser.to_string(),
+                                "moz:firefoxOptions" => object! {
+                                    "args" => array!{"-headless"}
+                                },
+                            }
                         }
                     }
-                }
-            } else {
-                object!{
-                    "capabilities" => object!{
-                        "alwaysMatch" => object!{
-                            "platformName" => platform.to_string(),
-                            "browserName" => browser.to_string(),
-                            "goog:chromeOptions" => object! {
-                                "args" => array!{"-headless"}
+                } else {
+                    object!{
+                        "capabilities" => object!{
+                            "alwaysMatch" => object!{
+                                "platformName" => platform.to_string(),
+                                "browserName" => browser.to_string()
                             }
                         }
                     }
                 }
-            }
-            
-        } else {
-            object!{
-                "capabilities" => object!{
-                    "alwaysMatch" => object!{
-                        "platformName" => platform.to_string(),
-                        "browserName" => browser.to_string()
+            },
+            Browser::Chrome => {
+                if headless {
+                    object!{
+                        "capabilities" => object!{
+                            "alwaysMatch" => object!{
+                                "platformName" => platform.to_string(),
+                                "browserName" => browser.to_string(),
+                                "goog:chromeOptions" => object! {
+                                    "args" => array!{"-headless"}
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    object!{
+                        "capabilities" => object!{
+                            "alwaysMatch" => object!{
+                                "platformName" => platform.to_string(),
+                                "browserName" => browser.to_string()
+                            }
+                        }
                     }
                 }
             }
@@ -196,15 +135,13 @@ impl<'a> Session<'a> {
 
         info!("Creating session... capabilities = {}", post_data);
         
-        let res = session
-            .client
-            .post("http://localhost:4444/session")
-            .body(post_data.to_string())
+        let res = minreq::post("http://localhost:4444/session")
+            .with_body(post_data.to_string())
             .send();
 
         // Read error
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["sessionId"].is_string() {
                         session.id = Some(json["value"]["sessionId"].to_string());
@@ -221,7 +158,7 @@ impl<'a> Session<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -247,14 +184,12 @@ impl<'a> Session<'a> {
         request_url.push_str("/window/handles");
 
         // send command
-        let res = self
-            .client
-            .get(&request_url)
+        let res = minreq::get(&request_url)
             .send();
         
         // Read response
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if !json["value"]["handles"].is_null() {
                         let mut tabs: Vec<Tab> = Vec::new();
@@ -277,7 +212,7 @@ impl<'a> Session<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -302,14 +237,12 @@ impl<'a> Session<'a> {
         request_url.push_str("/window");
 
         // send command
-        let res = self
-            .client
-            .get(&request_url)
+        let res = minreq::get(&request_url)
             .send();
         
         // Read error
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_string() {
                         Ok(json["value"].to_string())
@@ -325,7 +258,7 @@ impl<'a> Session<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -347,14 +280,12 @@ impl<'a> Session<'a> {
         request_url.push_str("/timeouts");
 
         // send command
-        let res = self
-            .client
-            .get(&request_url)
+        let res = minreq::get(&request_url)
             .send();
         
         // Read error
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["pageLoad"].is_number() && json["value"]["implicit"].is_number() {
                         Ok(Timeouts{
@@ -374,7 +305,7 @@ impl<'a> Session<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -397,15 +328,13 @@ impl<'a> Session<'a> {
         let postdata = timeouts.to_json();
 
         // send command
-        let res = self
-            .client
-            .post(&request_url)
-            .body(postdata.to_string())
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
             .send();
         
         // Read error
-        if let Ok(mut res) = res {
-            if let Ok(text) = &res.text() {
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_null() {
                         Ok(())
@@ -421,7 +350,7 @@ impl<'a> Session<'a> {
                     Err(WebdriverError::InvalidResponse)
                 }
             } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", &res.text());
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
                 Err(WebdriverError::InvalidResponse)
             }
         } else {
@@ -431,7 +360,7 @@ impl<'a> Session<'a> {
     }
 }
 
-impl<'a> Drop for Session<'a> {
+impl Drop for Session {
     fn drop(&mut self) {
         if self.webdriver_process.is_some() {
             warn!("Killing webdriver process (may fail silently)");

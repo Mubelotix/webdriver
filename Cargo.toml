@@ -1,11 +1,11 @@
 [package]
-name = "webdriver"
+name = "webdriver-client"
 version = "0.1.0"
 authors = ["NotAefka <notaefka@protonmail.com>"]
 edition = "2018"
 
 [dependencies]
-json = "0.11.15"
-reqwest = "0.9.20"
+minreq = { version="2.0.3" }
+json = "0.12.1"
 log = "0.4.8"
-env_logger = "0.6.2"
+env_logger = "0.7.1"
