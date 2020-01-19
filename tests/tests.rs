@@ -34,7 +34,7 @@ fn getters() {
 
 #[test]
 fn tabs() {
-    //env_logger::init();
+    env_logger::init();
     let session = Session::new(BROWSER, false).expect("Echec de création de la session");
 
     let mut window1 = session.get_selected_tab().unwrap();
@@ -46,8 +46,6 @@ fn tabs() {
     assert_eq!(window2.get_url().unwrap(), String::from("http://example.com/"));
     window1.navigate("https://www.google.com/").unwrap();
     assert_eq!(window1.get_url().unwrap(), String::from("https://www.google.com/"));
-
-    let tabs = session.get_all_tabs().unwrap();
 
     window2.close().unwrap();
     window1.select().unwrap();

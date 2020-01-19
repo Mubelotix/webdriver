@@ -9,7 +9,7 @@ use crate::tab::*;
 use crate::error::*;
 use std::process::{Command, Stdio};
 use std::thread;
-use log::{info, warn, error};
+use log::{debug, info, warn, error};
 
 pub struct Session {
     id: Option<String>,
@@ -191,13 +191,15 @@ impl Session {
         if let Ok(res) = res {
             if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
+                    debug!("response: {}", json);
+
                     if !json["value"].is_null() {
                         let mut tabs: Vec<Tab> = Vec::new();
                         tabs.clear();
                         let mut i = 0;
                         while !json["value"][i].is_null() {
-                            i += 1;
                             tabs.push(Tab::new_from(json["value"][i].to_string(), &self));
+                            i += 1;
                         }
                         Ok(tabs)
                     } else if json["value"]["error"].is_string() {
