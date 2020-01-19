@@ -33,6 +33,10 @@ impl<'a> Tab<'a> {
         }
     }
 
+    pub fn get_id(&self) -> &String {
+        &self.id
+    }
+
     pub fn get_session_id(&self) -> Option<&String> {
         self.session.get_id()
     }
