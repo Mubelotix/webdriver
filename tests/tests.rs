@@ -1,6 +1,6 @@
-use webdriver_client::session::*;
-use webdriver_client::enums::*;
-use webdriver_client::tab::*;
+use lw_webdriver::session::*;
+use lw_webdriver::enums::*;
+use lw_webdriver::tab::*;
 use std::{thread, time::Duration};
 
 static BROWSER: Browser = Browser::Firefox;
