@@ -23,6 +23,14 @@
 //!
 //! thread::sleep(Duration::from_secs(5));
 //! ```
+//! 
+//! # Running tests
+//! 
+//! Run tests one by one:
+//! 
+//! ```ignore
+//! cargo test -- --test-threads=1
+//! ```
 
 pub mod session;
 pub mod enums;

@@ -12,7 +12,7 @@ use std::thread;
 use log::{debug, info, warn, error};
 
 pub struct Session {
-    id: Option<String>,
+    id: String,
     webdriver_process: Option<std::process::Child>,
 }
 
@@ -78,10 +78,7 @@ impl Session {
         }
 
         // Create session
-        let mut session = Session {
-            id: None,
-            webdriver_process: None,
-        };
+        let session_id: String;
         let post_data = match browser {
             Browser::Firefox => {
                 if headless {
@@ -144,8 +141,12 @@ impl Session {
             if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["sessionId"].is_string() {
-                        session.id = Some(json["value"]["sessionId"].to_string());
-                        Ok(session)
+                        debug!("session id: {}", json["value"]["sessionId"].to_string());
+                        session_id = json["value"]["sessionId"].to_string();
+                        Ok(Session {
+                            id: session_id,
+                            webdriver_process: None,
+                        })
                     } else if json["value"]["error"].is_string() {
                         error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
@@ -167,20 +168,12 @@ impl Session {
         }
     }
 
-    pub fn get_id(&self) -> Option<&String> {
-        self.id.as_ref()
-    }
-
     pub fn get_all_tabs(&self) -> Result<Vec<Tab>, WebdriverError> {
         info!("Getting all tabs...");
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.get_id().to_string();
         request_url.push_str("/window/handles");
 
         // send command
@@ -198,7 +191,7 @@ impl Session {
                         tabs.clear();
                         let mut i = 0;
                         while !json["value"][i].is_null() {
-                            tabs.push(Tab::new_from(json["value"][i].to_string(), &self));
+                            tabs.push(Tab::new_from(json["value"][i].to_string().parse().unwrap(), &self));
                             i += 1;
                         }
                         Ok(tabs)
@@ -231,11 +224,7 @@ impl Session {
     pub fn get_selected_tab_id(&self) -> Result<String, WebdriverError> {
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.get_id().to_string();
         request_url.push_str("/window");
 
         // send command
@@ -247,7 +236,7 @@ impl Session {
             if let Ok(text) = res.as_str() {
                 if let Ok(json) = json::parse(text) {
                     if json["value"].is_string() {
-                        Ok(json["value"].to_string())
+                        Ok(json["value"].to_string().parse().unwrap())
                     } else if json["value"]["error"].is_string() {
                         error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
                         Err(WebdriverError::from(json["value"]["error"].to_string()))
@@ -274,11 +263,7 @@ impl Session {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.get_id().to_string();
         request_url.push_str("/timeouts");
 
         // send command
@@ -321,11 +306,7 @@ impl Session {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.get_id().to_string();
         request_url.push_str("/timeouts");
         let postdata = timeouts.to_json();
 
@@ -362,8 +343,20 @@ impl Session {
     }
 }
 
+impl WebdriverObject for Session {
+    fn get_id(&self) -> &String {
+        &self.id
+    }
+}
+
 impl Drop for Session {
+    #[allow(unused_must_use)]
     fn drop(&mut self) {
+        if let Ok(tabs) = self.get_all_tabs() {
+            for mut tab in tabs {
+                tab.close();
+            }
+        }
         if self.webdriver_process.is_some() {
             warn!("Killing webdriver process (may fail silently)");
             self.webdriver_process.take().unwrap().kill();

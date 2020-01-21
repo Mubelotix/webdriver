@@ -6,7 +6,7 @@ use crate::elements::*;
 use crate::session::*;
 use crate::enums::*;
 use crate::error::*;
-use log::{info, warn, error};
+use log::{info, error};
 
 /// Tabs are used to load a site and get informations.
 /// 
@@ -33,12 +33,8 @@ impl<'a> Tab<'a> {
         }
     }
 
-    pub fn get_id(&self) -> &String {
-        &self.id
-    }
-
-    pub fn get_session_id(&self) -> Option<&String> {
-        self.session.get_id()
+    pub fn get_session(&self) -> &Session {
+        self.session
     }
 
     /// Create a new tab in a session.
@@ -47,11 +43,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &session.get_id().to_string();
         request_url.push_str("/window/new");
         let postdata = object! {};
 
@@ -66,7 +58,7 @@ impl<'a> Tab<'a> {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["handle"].is_string() {
                         Ok(Tab{
-                            id: json["value"]["handle"].to_string(),
+                            id: json["value"]["handle"].to_string().parse().unwrap(),
                             session
                         })
                     } else if json["value"]["error"].is_string() {
@@ -102,11 +94,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.session.get_id().to_string();
         request_url.push_str("/window");
         let postdata = object! {
             "handle" => self.id.clone(),
@@ -155,11 +143,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.session.get_id().to_string();
         request_url.push_str("/url");
         let postdata = object! {
             "url" => url,
@@ -208,11 +192,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.session.get_id().to_string();
         request_url.push_str("/window");
 
         // send command
@@ -254,11 +234,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.session.get_id().to_string();
         request_url.push_str("/element");
         let postdata = object! {
             "using" => selector.to_string(),
@@ -276,7 +252,7 @@ impl<'a> Tab<'a> {
                 if let Ok(json) = json::parse(text) {
                     if !json["value"]["element-6066-11e4-a52e-4f735466cecf"].is_null() {
                         let inter = &*self; // TODO
-                        Ok(Some(Element::new(json["value"]["element-6066-11e4-a52e-4f735466cecf"].to_string(), inter, (selector, tofind))))
+                        Ok(Some(Element::new(json["value"]["element-6066-11e4-a52e-4f735466cecf"].to_string().parse().unwrap(), inter, (selector, tofind))))
                     } else if json["value"]["error"].is_string() {
                         let e = WebdriverError::from(json["value"]["error"].to_string());
                         error!("{:?}, response: {}", e, json);
@@ -314,11 +290,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.session.get_id().to_string();
         request_url.push_str("/url");
 
         // send command
@@ -363,11 +335,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.session.get_id().to_string();
         request_url.push_str("/title");
 
         // send command
@@ -412,11 +380,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.session.get_id().to_string();
         request_url.push_str("/back");
         let postdata = object! {};
 
@@ -463,11 +427,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.session.get_id().to_string();
         request_url.push_str("/forward");
         let postdata = object! {};
 
@@ -514,11 +474,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.session.get_id().to_string();
         request_url.push_str("/refresh");
         let postdata = object! {};
 
@@ -565,11 +521,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.session.get_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.session.get_id().to_string();
         request_url.push_str("/execute/sync");
         let postdata = object!{
             "script" => script,
@@ -606,5 +558,11 @@ impl<'a> Tab<'a> {
             error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
+    }
+}
+
+impl WebdriverObject for Tab<'_> {
+    fn get_id(&self) -> &String {
+        &self.id
     }
 }

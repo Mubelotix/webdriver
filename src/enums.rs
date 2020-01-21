@@ -38,10 +38,6 @@ impl Browser {
     }
 }
 
-struct Options {
-    headless: bool
-}
-
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
@@ -69,4 +65,8 @@ impl Platform {
             Platform::Unknow
         }
     }
+}
+
+pub trait WebdriverObject {
+    fn get_id(&self) -> &String;
 }

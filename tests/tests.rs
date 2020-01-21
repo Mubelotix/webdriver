@@ -34,7 +34,7 @@ fn getters() {
 
 #[test]
 fn tabs() {
-    env_logger::init();
+    //env_logger::init();
     let session = Session::new(BROWSER, false).expect("Echec de création de la session");
 
     let mut window1 = session.get_selected_tab().unwrap();
@@ -71,9 +71,6 @@ fn timeouts() {
     assert_eq!(None, timeouts.script);
     assert_eq!(299_999, timeouts.page_load);
     assert_eq!(1, timeouts.implicit);
-
-    // necessary to use the close of window when variable is dropped
-    let tab = session.get_selected_tab().unwrap();
 }
 
 #[test]
@@ -108,7 +105,7 @@ fn execute_javascript() {
 
 #[test]
 fn element_obscured() {
-    env_logger::init();
+    //env_logger::init();
     let session = Session::new(BROWSER, false).expect("Echec de création de la session");
 
     let mut tab = session.get_selected_tab().unwrap();

@@ -26,4 +26,12 @@ link.click().unwrap();
 thread::sleep(Duration::from_secs(5));
 ```
 
+## Running tests
+
+Run tests one by one:
+
+```rust
+cargo test -- --test-threads=1
+```
+
 License: MIT

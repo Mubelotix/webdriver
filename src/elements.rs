@@ -1,6 +1,6 @@
 use crate::tab::*;
 use crate::error::*;
-use crate::enums::Selector;
+use crate::enums::{Selector, WebdriverObject};
 use json::*;
 use std::result::Result;
 use log::{debug, info, warn, error};
@@ -28,13 +28,9 @@ impl<'a> Element<'a> {
 
         // Build request
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.tab.get_session_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.tab.get_session().get_id().to_string();
         request_url.push_str("/element/");
-        request_url += &self.id;
+        request_url += &self.id.to_string();
         request_url.push_str("/value");
         let postdata = object! {
             "text" => text
@@ -77,13 +73,9 @@ impl<'a> Element<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.tab.get_session_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.tab.get_session().get_id().to_string();
         request_url.push_str("/element/");
-        request_url += &self.id;
+        request_url += &self.id.to_string();
         request_url.push_str("/text");
 
         // send command
@@ -121,12 +113,12 @@ impl<'a> Element<'a> {
         info!("Clicking on element...");
         
         // TODO watch the bug
-        /*warn!("Using javascript click because of a bug in geckodriver where and error hapen but is not reported to us.");
+        warn!("Using javascript click because of a bug in geckodriver where and error hapen but is not reported to us.");
         if let Ok(()) = self.tab.execute_script("var element = document.evaluate(arguments[0], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;element.click();", vec![self.stored_selector.1]) {
             return Ok(());
         } else {
             error!("Failed to click with javascript. Using normal method.");
-        }*/
+        }
 
         // select tab
         debug!("Selecting tab");
@@ -135,13 +127,9 @@ impl<'a> Element<'a> {
         // Build request
         debug!("Building request");
         let mut request_url = String::from("http://localhost:4444/session/");
-        if let Some(id) = self.tab.get_session_id() {
-            request_url += &id;
-        } else {
-            return Err(WebdriverError::NoSuchWindow);
-        }
+        request_url += &self.tab.get_session().get_id().to_string();
         request_url.push_str("/element/");
-        request_url += &self.id;
+        request_url += &self.id.to_string();
         request_url.push_str("/click");
         let postdata = object! {
         };
@@ -192,5 +180,11 @@ impl<'a> Element<'a> {
             error!("WebdriverError::FailedRequest, error: {:?}", res);
             Err(WebdriverError::FailedRequest)
         }
+    }
+}
+
+impl WebdriverObject for Element<'_> {
+    fn get_id(&self) -> &String {
+        &self.id
     }
 }
