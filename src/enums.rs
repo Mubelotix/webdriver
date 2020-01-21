@@ -67,6 +67,6 @@ impl Platform {
     }
 }
 
-pub trait WebdriverObject {
+pub trait WebdriverObject: PartialEq {
     fn get_id(&self) -> &String;
 }

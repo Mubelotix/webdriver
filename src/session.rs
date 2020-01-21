@@ -343,6 +343,12 @@ impl Session {
     }
 }
 
+impl PartialEq for Session {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_id() == other.get_id()
+    }
+}
+
 impl WebdriverObject for Session {
     fn get_id(&self) -> &String {
         &self.id

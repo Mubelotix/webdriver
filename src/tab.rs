@@ -561,6 +561,12 @@ impl<'a> Tab<'a> {
     }
 }
 
+impl PartialEq for Tab<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_id() == other.get_id()
+    }
+}
+
 impl WebdriverObject for Tab<'_> {
     fn get_id(&self) -> &String {
         &self.id

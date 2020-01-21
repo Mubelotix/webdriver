@@ -183,6 +183,12 @@ impl<'a> Element<'a> {
     }
 }
 
+impl PartialEq for Element<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_id() == other.get_id()
+    }
+}
+
 impl WebdriverObject for Element<'_> {
     fn get_id(&self) -> &String {
         &self.id
