@@ -7,6 +7,7 @@ use crate::session::*;
 use crate::enums::*;
 use crate::error::*;
 use log::{info, error};
+use std::rc::Rc;
 
 /// Tabs are used to load a site and get informations.
 /// 
@@ -20,73 +21,33 @@ use log::{info, error};
 /// 
 /// default_window.navigate("https://www.mozilla.org/fr/").unwrap();
 /// ```
-pub struct Tab<'a> {
-    id: String,
-    pub session: &'a Session
+pub struct Tab {
+    pub(crate) id: String,
+    pub(crate) session_id: Rc<String>
 }
 
-impl<'a> Tab<'a> {
-    pub fn new_from(id: String, session: &'a Session) -> Tab<'a> {
+impl Tab {
+    pub fn new_from(id: String, session_id: Rc<String>) -> Tab {
         Tab {
             id,
-            session
+            session_id
         }
     }
 
-    pub fn get_session(&self) -> &Session {
-        self.session
+    pub fn get_session_id(&self) -> Rc<String> {
+        Rc::clone(&self.session_id)
     }
 
     /// Create a new tab in a session.
-    pub fn new(session: &'a Session) -> Result<Tab<'a>, WebdriverError> {
-        info!("Creating tab...");
-
-        // build command
-        let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &session.get_id().to_string();
-        request_url.push_str("/window/new");
-        let postdata = object! {};
-
-        // send command
-        let res = minreq::post(&request_url)
-            .with_body(postdata.to_string())
-            .send();
-
-        // Read response
-        if let Ok(res) = res {
-            if let Ok(text) = res.as_str() {
-                if let Ok(json) = json::parse(text) {
-                    if json["value"]["handle"].is_string() {
-                        Ok(Tab{
-                            id: json["value"]["handle"].to_string().parse().unwrap(),
-                            session
-                        })
-                    } else if json["value"]["error"].is_string() {
-                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
-                        Err(WebdriverError::from(json["value"]["error"].to_string()))
-                    } else {
-                        error!("WebdriverError::InvalidResponse, response: {}", json);
-                        Err(WebdriverError::InvalidResponse)
-                    }
-                } else {
-                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
-                    Err(WebdriverError::InvalidResponse)
-                }
-            } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
-                Err(WebdriverError::InvalidResponse)
-            }
-        } else {
-            error!("WebdriverError::FailedRequest, error: {:?}", res);
-            Err(WebdriverError::FailedRequest)
-        }
+    pub fn new(session: &mut Session) -> Result<Tab, WebdriverError> {
+        session.new_tab()
     }
 
     /// Select this tab.
     /// Selection is done automatically by this crate when you get informations.
     pub fn select(&self) -> Result<(), WebdriverError> {
         // check if it is needed to select the tab
-        if let Ok(id) = self.session.get_selected_tab_id() {
+        if let Ok(id) = Session::get_selected_tab_id(Rc::clone(&self.session_id)) {
             if id == self.id {
                 return Ok(());
             }
@@ -94,7 +55,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.session.get_id().to_string();
+        request_url += &self.session_id;
         request_url.push_str("/window");
         let postdata = object! {
             "handle" => self.id.clone(),
@@ -143,7 +104,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.session.get_id().to_string();
+        request_url += &self.session_id;
         request_url.push_str("/url");
         let postdata = object! {
             "url" => url,
@@ -192,7 +153,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.session.get_id().to_string();
+        request_url += &self.session_id;
         request_url.push_str("/window");
 
         // send command
@@ -224,7 +185,7 @@ impl<'a> Tab<'a> {
     }
 
     /// Find an element in the tab, selected by a [Selector](../enums/enum.Selector.html).
-    pub fn find(&self, selector: Selector, tofind: &'a str) -> Result<Option<Element>, WebdriverError> {
+    pub fn find<'a>(&'a self, selector: Selector, tofind: &'a str) -> Result<Option<Element<'a>>, WebdriverError> {
         info!("Finding {} with selector {}", tofind, selector.to_string());
 
         // select tab
@@ -234,7 +195,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.session.get_id().to_string();
+        request_url += &self.session_id;
         request_url.push_str("/element");
         let postdata = object! {
             "using" => selector.to_string(),
@@ -290,7 +251,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.session.get_id().to_string();
+        request_url += &self.session_id;
         request_url.push_str("/url");
 
         // send command
@@ -335,7 +296,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.session.get_id().to_string();
+        request_url += &self.session_id;
         request_url.push_str("/title");
 
         // send command
@@ -380,7 +341,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.session.get_id().to_string();
+        request_url += &self.session_id;
         request_url.push_str("/back");
         let postdata = object! {};
 
@@ -427,7 +388,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.session.get_id().to_string();
+        request_url += &self.session_id;
         request_url.push_str("/forward");
         let postdata = object! {};
 
@@ -474,7 +435,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.session.get_id().to_string();
+        request_url += &self.session_id;
         request_url.push_str("/refresh");
         let postdata = object! {};
 
@@ -521,7 +482,7 @@ impl<'a> Tab<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.session.get_id().to_string();
+        request_url += &self.session_id;
         request_url.push_str("/execute/sync");
         let postdata = object!{
             "script" => script,
@@ -561,13 +522,13 @@ impl<'a> Tab<'a> {
     }
 }
 
-impl PartialEq for Tab<'_> {
+impl PartialEq for Tab {
     fn eq(&self, other: &Self) -> bool {
         self.get_id() == other.get_id()
     }
 }
 
-impl WebdriverObject for Tab<'_> {
+impl WebdriverObject for Tab {
     fn get_id(&self) -> &String {
         &self.id
     }

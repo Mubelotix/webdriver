@@ -10,9 +10,10 @@ use crate::error::*;
 use std::process::{Command, Stdio};
 use std::thread;
 use log::{debug, info, warn, error};
+use std::rc::Rc;
 
 pub struct Session {
-    id: String,
+    id: Rc<String>,
     webdriver_process: Option<std::process::Child>,
 }
 
@@ -70,6 +71,50 @@ impl Session {
         result
     }
 
+    pub fn new_tab(&mut self) -> Result<Tab, WebdriverError> {
+        info!("Creating tab...");
+
+        // build command
+        let mut request_url = String::from("http://localhost:4444/session/");
+        request_url += &self.id;
+        request_url.push_str("/window/new");
+        let postdata = object! {};
+
+        // send command
+        let res = minreq::post(&request_url)
+            .with_body(postdata.to_string())
+            .send();
+
+        // Read response
+        if let Ok(res) = res {
+            if let Ok(text) = res.as_str() {
+                if let Ok(json) = json::parse(text) {
+                    if json["value"]["handle"].is_string() {
+                        Ok(Tab{
+                            id: json["value"]["handle"].to_string().parse().unwrap(),
+                            session_id: Rc::clone(&self.id)
+                        })
+                    } else if json["value"]["error"].is_string() {
+                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
+                        Err(WebdriverError::from(json["value"]["error"].to_string()))
+                    } else {
+                        error!("WebdriverError::InvalidResponse, response: {}", json);
+                        Err(WebdriverError::InvalidResponse)
+                    }
+                } else {
+                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
+                    Err(WebdriverError::InvalidResponse)
+                }
+            } else {
+                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
+                Err(WebdriverError::InvalidResponse)
+            }
+        } else {
+            error!("WebdriverError::FailedRequest, error: {:?}", res);
+            Err(WebdriverError::FailedRequest)
+        }
+    }
+
     fn new_session(browser: Browser, headless: bool)  -> Result<Self, WebdriverError> {
         // Detect platform
         let platform = Platform::current();
@@ -78,7 +123,7 @@ impl Session {
         }
 
         // Create session
-        let session_id: String;
+        let session_id: Rc<String>;
         let post_data = match browser {
             Browser::Firefox => {
                 if headless {
@@ -142,7 +187,7 @@ impl Session {
                 if let Ok(json) = json::parse(text) {
                     if json["value"]["sessionId"].is_string() {
                         debug!("session id: {}", json["value"]["sessionId"].to_string());
-                        session_id = json["value"]["sessionId"].to_string();
+                        session_id = Rc::new(json["value"]["sessionId"].to_string());
                         Ok(Session {
                             id: session_id,
                             webdriver_process: None,
@@ -191,7 +236,7 @@ impl Session {
                         tabs.clear();
                         let mut i = 0;
                         while !json["value"][i].is_null() {
-                            tabs.push(Tab::new_from(json["value"][i].to_string().parse().unwrap(), &self));
+                            tabs.push(Tab::new_from(json["value"][i].to_string().parse().unwrap(), Rc::clone(&self.id)));
                             i += 1;
                         }
                         Ok(tabs)
@@ -218,13 +263,13 @@ impl Session {
 
     pub fn get_selected_tab(&self) -> Result<Tab, WebdriverError> {
         info!("Getting selected tab...");
-        Ok(Tab::new_from(self.get_selected_tab_id()?, self))
+        Ok(Tab::new_from(Session::get_selected_tab_id(Rc::clone(&self.id))?, Rc::clone(&self.id)))
     }
 
-    pub fn get_selected_tab_id(&self) -> Result<String, WebdriverError> {
+    pub fn get_selected_tab_id(session_id: Rc<String>) -> Result<String, WebdriverError> {
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.get_id().to_string();
+        request_url += &session_id;
         request_url.push_str("/window");
 
         // send command

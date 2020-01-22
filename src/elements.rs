@@ -7,7 +7,7 @@ use log::{debug, info, warn, error};
 
 pub struct Element<'a> {
     id: String,
-    tab: &'a Tab<'a>,
+    tab: &'a Tab,
     stored_selector: (Selector, &'a str)
 }
 
@@ -28,7 +28,7 @@ impl<'a> Element<'a> {
 
         // Build request
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.tab.get_session().get_id().to_string();
+        request_url += &self.tab.get_session_id();
         request_url.push_str("/element/");
         request_url += &self.id.to_string();
         request_url.push_str("/value");
@@ -73,7 +73,7 @@ impl<'a> Element<'a> {
 
         // build command
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.tab.get_session().get_id().to_string();
+        request_url += &self.tab.get_session_id();
         request_url.push_str("/element/");
         request_url += &self.id.to_string();
         request_url.push_str("/text");
@@ -127,7 +127,7 @@ impl<'a> Element<'a> {
         // Build request
         debug!("Building request");
         let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.tab.get_session().get_id().to_string();
+        request_url += &self.tab.get_session_id();
         request_url.push_str("/element/");
         request_url += &self.id.to_string();
         request_url.push_str("/click");
