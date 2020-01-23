@@ -11,6 +11,7 @@ use std::process::{Command, Stdio};
 use std::thread;
 use log::{debug, info, warn, error};
 use std::rc::Rc;
+use crate::http_requests::*;
 
 pub struct Session {
     id: Rc<String>,
@@ -71,50 +72,6 @@ impl Session {
         result
     }
 
-    pub fn new_tab(&mut self) -> Result<Tab, WebdriverError> {
-        info!("Creating tab...");
-
-        // build command
-        let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.id;
-        request_url.push_str("/window/new");
-        let postdata = object! {};
-
-        // send command
-        let res = minreq::post(&request_url)
-            .with_body(postdata.to_string())
-            .send();
-
-        // Read response
-        if let Ok(res) = res {
-            if let Ok(text) = res.as_str() {
-                if let Ok(json) = json::parse(text) {
-                    if json["value"]["handle"].is_string() {
-                        Ok(Tab{
-                            id: json["value"]["handle"].to_string().parse().unwrap(),
-                            session_id: Rc::clone(&self.id)
-                        })
-                    } else if json["value"]["error"].is_string() {
-                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
-                        Err(WebdriverError::from(json["value"]["error"].to_string()))
-                    } else {
-                        error!("WebdriverError::InvalidResponse, response: {}", json);
-                        Err(WebdriverError::InvalidResponse)
-                    }
-                } else {
-                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
-                    Err(WebdriverError::InvalidResponse)
-                }
-            } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
-                Err(WebdriverError::InvalidResponse)
-            }
-        } else {
-            error!("WebdriverError::FailedRequest, error: {:?}", res);
-            Err(WebdriverError::FailedRequest)
-        }
-    }
-
     fn new_session(browser: Browser, headless: bool)  -> Result<Self, WebdriverError> {
         // Detect platform
         let platform = Platform::current();
@@ -122,8 +79,7 @@ impl Session {
             return Err(WebdriverError::UnsupportedPlatform);
         }
 
-        // Create session
-        let session_id: Rc<String>;
+        // Generate capabilities
         let post_data = match browser {
             Browser::Firefox => {
                 if headless {
@@ -174,217 +130,41 @@ impl Session {
                 }
             }
         };
-
-        info!("Creating session... capabilities = {}", post_data);
         
-        let res = minreq::post("http://localhost:4444/session")
-            .with_body(post_data.to_string())
-            .send();
+        // Send request
+        let session_id = new_session(&post_data.to_string())?;
+        Ok(Session {
+            id: Rc::new(session_id),
+            webdriver_process: None
+        })
+    }
 
-        // Read error
-        if let Ok(res) = res {
-            if let Ok(text) = res.as_str() {
-                if let Ok(json) = json::parse(text) {
-                    if json["value"]["sessionId"].is_string() {
-                        debug!("session id: {}", json["value"]["sessionId"].to_string());
-                        session_id = Rc::new(json["value"]["sessionId"].to_string());
-                        Ok(Session {
-                            id: session_id,
-                            webdriver_process: None,
-                        })
-                    } else if json["value"]["error"].is_string() {
-                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
-                        Err(WebdriverError::from(json["value"]["error"].to_string()))
-                    } else {
-                        error!("WebdriverError::InvalidResponse, response: {}", json);
-                        Err(WebdriverError::InvalidResponse)
-                    }
-                } else {
-                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
-                    Err(WebdriverError::InvalidResponse)
-                }
-            } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
-                Err(WebdriverError::InvalidResponse)
-            }
-        } else {
-            error!("WebdriverError::FailedRequest, error: {:?}", res);
-            Err(WebdriverError::FailedRequest)
-        }
+    pub fn new_tab(&mut self) -> Result<Tab, WebdriverError> {
+        let tab_id = new_tab(&self.id)?;
+        Ok(Tab::new_from(tab_id, Rc::clone(&self.id)))
     }
 
     pub fn get_all_tabs(&self) -> Result<Vec<Tab>, WebdriverError> {
-        info!("Getting all tabs...");
+        let ids = get_open_tabs(&self.id)?;
 
-        // build command
-        let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.get_id().to_string();
-        request_url.push_str("/window/handles");
-
-        // send command
-        let res = minreq::get(&request_url)
-            .send();
-        
-        // Read response
-        if let Ok(res) = res {
-            if let Ok(text) = res.as_str() {
-                if let Ok(json) = json::parse(text) {
-                    debug!("response: {}", json);
-
-                    if !json["value"].is_null() {
-                        let mut tabs: Vec<Tab> = Vec::new();
-                        tabs.clear();
-                        let mut i = 0;
-                        while !json["value"][i].is_null() {
-                            tabs.push(Tab::new_from(json["value"][i].to_string().parse().unwrap(), Rc::clone(&self.id)));
-                            i += 1;
-                        }
-                        Ok(tabs)
-                    } else if json["value"]["error"].is_string() {
-                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
-                        Err(WebdriverError::from(json["value"]["error"].to_string()))
-                    } else {
-                        error!("WebdriverError::InvalidResponse, response: {}", json);
-                        Err(WebdriverError::InvalidResponse)
-                    }
-                } else {
-                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
-                    Err(WebdriverError::InvalidResponse)
-                }
-            } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
-                Err(WebdriverError::InvalidResponse)
-            }
-        } else {
-            error!("WebdriverError::FailedRequest, error: {:?}", res);
-            Err(WebdriverError::FailedRequest)
+        let mut tabs: Vec<Tab> = Vec::new();
+        for id in ids {
+            tabs.push(Tab::new_from(id, Rc::clone(&self.id)));
         }
+
+        Ok(tabs)
     }
 
     pub fn get_selected_tab(&self) -> Result<Tab, WebdriverError> {
-        info!("Getting selected tab...");
-        Ok(Tab::new_from(Session::get_selected_tab_id(Rc::clone(&self.id))?, Rc::clone(&self.id)))
-    }
-
-    pub fn get_selected_tab_id(session_id: Rc<String>) -> Result<String, WebdriverError> {
-        // build command
-        let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &session_id;
-        request_url.push_str("/window");
-
-        // send command
-        let res = minreq::get(&request_url)
-            .send();
-        
-        // Read error
-        if let Ok(res) = res {
-            if let Ok(text) = res.as_str() {
-                if let Ok(json) = json::parse(text) {
-                    if json["value"].is_string() {
-                        Ok(json["value"].to_string().parse().unwrap())
-                    } else if json["value"]["error"].is_string() {
-                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
-                        Err(WebdriverError::from(json["value"]["error"].to_string()))
-                    } else {
-                        error!("WebdriverError::InvalidResponse, response: {}", json);
-                        Err(WebdriverError::InvalidResponse)
-                    }
-                } else {
-                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
-                    Err(WebdriverError::InvalidResponse)
-                }
-            } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
-                Err(WebdriverError::InvalidResponse)
-            }
-        } else {
-            error!("WebdriverError::FailedRequest, error: {:?}", res);
-            Err(WebdriverError::FailedRequest)
-        }
+        Ok(Tab::new_from(get_selected_tab(&self.id)?, Rc::clone(&self.id)))
     }
 
     pub fn get_timeouts(&self) -> Result<Timeouts, WebdriverError> {
-        info!("Getting timeouts...");
-
-        // build command
-        let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.get_id().to_string();
-        request_url.push_str("/timeouts");
-
-        // send command
-        let res = minreq::get(&request_url)
-            .send();
-        
-        // Read error
-        if let Ok(res) = res {
-            if let Ok(text) = res.as_str() {
-                if let Ok(json) = json::parse(text) {
-                    if json["value"]["pageLoad"].is_number() && json["value"]["implicit"].is_number() {
-                        Ok(Timeouts{
-                            script: json["value"]["script"].as_usize(),
-                            page_load: json["value"]["pageLoad"].as_usize().unwrap(),
-                            implicit: json["value"]["implicit"].as_usize().unwrap(),
-                        })
-                    } else if json["value"]["error"].is_string() {
-                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
-                        Err(WebdriverError::from(json["value"]["error"].to_string()))
-                    } else {
-                        error!("WebdriverError::InvalidResponse, response: {}", json);
-                        Err(WebdriverError::InvalidResponse)
-                    }
-                } else {
-                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
-                    Err(WebdriverError::InvalidResponse)
-                }
-            } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
-                Err(WebdriverError::InvalidResponse)
-            }
-        } else {
-            error!("WebdriverError::FailedRequest, error: {:?}", res);
-            Err(WebdriverError::FailedRequest)
-        }
+        Ok(get_timeouts(&self.id)?)
     }
 
     pub fn set_timeouts(&mut self, timeouts: Timeouts) -> Result<(), WebdriverError> {
-        info!("Setting timeouts : {:?}", timeouts);
-
-        // build command
-        let mut request_url = String::from("http://localhost:4444/session/");
-        request_url += &self.get_id().to_string();
-        request_url.push_str("/timeouts");
-        let postdata = timeouts.to_json();
-
-        // send command
-        let res = minreq::post(&request_url)
-            .with_body(postdata.to_string())
-            .send();
-        
-        // Read error
-        if let Ok(res) = res {
-            if let Ok(text) = res.as_str() {
-                if let Ok(json) = json::parse(text) {
-                    if json["value"].is_null() {
-                        Ok(())
-                    } else if json["value"]["error"].is_string() {
-                        error!("{:?}, response: {}", WebdriverError::from(json["value"]["error"].to_string()), json);
-                        Err(WebdriverError::from(json["value"]["error"].to_string()))
-                    } else {
-                        error!("WebdriverError::InvalidResponse, response: {}", json);
-                        Err(WebdriverError::InvalidResponse)
-                    }
-                } else {
-                    error!("WebdriverError::InvalidResponse, error: {:?}", json::parse(text));
-                    Err(WebdriverError::InvalidResponse)
-                }
-            } else {
-                error!("WebdriverError::InvalidResponse, error: {:?}", res.as_str());
-                Err(WebdriverError::InvalidResponse)
-            }
-        } else {
-            error!("WebdriverError::FailedRequest, error: {:?}", res);
-            Err(WebdriverError::FailedRequest)
-        }
+        Ok(set_timeouts(&self.id, timeouts)?)
     }
 }
 

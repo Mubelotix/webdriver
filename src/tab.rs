@@ -8,6 +8,7 @@ use crate::enums::*;
 use crate::error::*;
 use log::{info, error};
 use std::rc::Rc;
+use crate::http_requests::get_selected_tab;
 
 /// Tabs are used to load a site and get informations.
 /// 
@@ -47,7 +48,7 @@ impl Tab {
     /// Selection is done automatically by this crate when you get informations.
     pub fn select(&self) -> Result<(), WebdriverError> {
         // check if it is needed to select the tab
-        if let Ok(id) = Session::get_selected_tab_id(Rc::clone(&self.session_id)) {
+        if let Ok(id) = get_selected_tab(&self.session_id) {
             if id == self.id {
                 return Ok(());
             }
