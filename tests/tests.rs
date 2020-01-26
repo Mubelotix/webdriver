@@ -35,13 +35,13 @@ fn getters() {
 #[test]
 fn tabs() {
     //env_logger::init();
-    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
+    let mut session = Session::new(BROWSER, false).expect("Echec de création de la session");
 
     let mut window1 = session.get_selected_tab().unwrap();
     window1.navigate("https://www.mozilla.org/fr/").unwrap();
     assert_eq!(window1.get_url().unwrap(), String::from("https://www.mozilla.org/fr/"));
 
-    let mut window2 = Tab::new(&session).unwrap();
+    let mut window2 = Tab::new(&mut session).unwrap();
     window2.navigate("http://example.com/").unwrap();
     assert_eq!(window2.get_url().unwrap(), String::from("http://example.com/"));
     window1.navigate("https://www.google.com/").unwrap();
@@ -105,7 +105,7 @@ fn execute_javascript() {
 
 #[test]
 fn element_obscured() {
-    //env_logger::init();
+    env_logger::init();
     let session = Session::new(BROWSER, false).expect("Echec de création de la session");
 
     let mut tab = session.get_selected_tab().unwrap();
