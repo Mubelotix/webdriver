@@ -41,8 +41,10 @@ impl Tab {
     }
 
     /// Create a new tab in a session.
-    pub fn new(session: &mut Session) -> Result<Tab, WebdriverError> {
-        session.new_tab()
+    /// This return an immutable reference (in a Result) because the tab is stored in the session.
+    pub fn new(session: &mut Session) -> Result<&Tab, WebdriverError> {
+        let tab_id = session.open_tab()?;
+        Ok(&session.tabs[tab_id])
     }
 
     /// Select this tab.

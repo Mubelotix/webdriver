@@ -15,6 +15,7 @@ use crate::http_requests::*;
 
 pub struct Session {
     id: Rc<String>,
+    pub tabs: Vec<Tab>,
     webdriver_process: Option<std::process::Child>,
 }
 
@@ -133,30 +134,34 @@ impl Session {
         
         // Send request
         let session_id = new_session(&post_data.to_string())?;
-        Ok(Session {
+        let mut session = Session {
             id: Rc::new(session_id),
+            tabs: Vec::new(),
             webdriver_process: None
-        })
+        };
+
+        session.update_tabs()?;
+
+        Ok(session)
     }
 
-    pub fn new_tab(&mut self) -> Result<Tab, WebdriverError> {
+    pub fn open_tab(&mut self) -> Result<usize, WebdriverError> {
         let tab_id = new_tab(&self.id)?;
-        Ok(Tab::new_from(tab_id, Rc::clone(&self.id)))
+        let new_tab = Tab::new_from(tab_id, Rc::clone(&self.id));
+        self.tabs.push(new_tab);
+
+        Ok(self.tabs.len() - 1)
     }
 
-    pub fn get_all_tabs(&self) -> Result<Vec<Tab>, WebdriverError> {
-        let ids = get_open_tabs(&self.id)?;
-
-        let mut tabs: Vec<Tab> = Vec::new();
-        for id in ids {
-            tabs.push(Tab::new_from(id, Rc::clone(&self.id)));
+    pub fn update_tabs(&mut self) -> Result<(), WebdriverError> {
+        let tabs_id = get_open_tabs(&self.id)?;
+        for tab_id in tabs_id {
+            if self.tabs.iter().position(|element| element.id == tab_id).is_none() {
+                self.tabs.push(Tab::new_from(tab_id, Rc::clone(&self.id)));
+            }
         }
 
-        Ok(tabs)
-    }
-
-    pub fn get_selected_tab(&self) -> Result<Tab, WebdriverError> {
-        Ok(Tab::new_from(get_selected_tab(&self.id)?, Rc::clone(&self.id)))
+        Ok(())
     }
 
     pub fn get_timeouts(&self) -> Result<Timeouts, WebdriverError> {
@@ -183,10 +188,8 @@ impl WebdriverObject for Session {
 impl Drop for Session {
     #[allow(unused_must_use)]
     fn drop(&mut self) {
-        if let Ok(tabs) = self.get_all_tabs() {
-            for mut tab in tabs {
-                tab.close();
-            }
+        for tab in &mut self.tabs {
+            tab.close();
         }
         if self.webdriver_process.is_some() {
             warn!("Killing webdriver process (may fail silently)");

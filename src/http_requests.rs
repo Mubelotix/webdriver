@@ -244,7 +244,7 @@ pub(crate) fn close_active_tab(session_id: &str) -> Result<(), WebdriverError> {
 
     let json = delete(&format!("http://localhost:4444/session/{}/window", session_id))?;
 
-    if json["value"].is_array() {
+    if json["value"].is_array() || json["value"].is_null() {
         debug!("tab closed successfully");
         Ok(())
     } else {

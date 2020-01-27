@@ -1,117 +1,214 @@
+#![allow(unused_must_use)]
+
 use lw_webdriver::session::*;
 use lw_webdriver::enums::*;
-use lw_webdriver::tab::*;
-use std::{thread, time::Duration};
-
-static BROWSER: Browser = Browser::Firefox;
+use std::panic::catch_unwind;
+use log::{info};
 
 #[test]
 fn navigation() {
-    //env_logger::init();
-    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
-    let mut tab = session.get_selected_tab().unwrap();
-    tab.navigate("http://example.com/").unwrap();
-    assert_eq!(tab.get_url().unwrap(), String::from("http://example.com/"));
-    tab.navigate("https://www.google.com/").unwrap();
-    assert_eq!(tab.get_url().unwrap(), String::from("https://www.google.com/"));
-    tab.back().unwrap();
-    assert_eq!(tab.get_url().unwrap(), String::from("http://example.com/"));
-    tab.forward().unwrap();
-    assert_eq!(tab.get_url().unwrap(), String::from("https://www.google.com/"));
-    tab.refresh().unwrap();
-    assert_eq!(tab.get_url().unwrap(), String::from("https://www.google.com/"));
+    catch_unwind(|| {
+        env_logger::init();
+    });
+    
+    for i in 0..2 {
+        let mut session = match i {
+            0 => {
+                info!("testing with Firefox");
+                Session::new(Browser::Firefox, false).unwrap()
+            },
+            _ => {
+                info!("testing with Chrome");
+                Session::new(Browser::Chrome, false).unwrap()
+            }
+        };
+
+        session.tabs[0].navigate("http://example.com/").unwrap(); // There is one tab already opened
+        assert_eq!(&session.tabs[0].get_url().unwrap(), "http://example.com/");
+
+        session.tabs[0].navigate("https://mubelotix.dev/").unwrap();
+        assert_eq!(&session.tabs[0].get_url().unwrap(), "https://mubelotix.dev/");
+
+        session.tabs[0].back().unwrap();
+        assert_eq!(&session.tabs[0].get_url().unwrap(), "http://example.com/");
+
+        session.tabs[0].forward().unwrap();
+        assert_eq!(&session.tabs[0].get_url().unwrap(), "https://mubelotix.dev/");
+
+        session.tabs[0].refresh().unwrap();
+        assert_eq!(&session.tabs[0].get_url().unwrap(), "https://mubelotix.dev/");
+    }
 }
 
 #[test]
 fn getters() {
-    //env_logger::init();
-    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
-    let mut tab = session.get_selected_tab().unwrap();
-    tab.navigate("http://example.com/").unwrap();
-    assert_eq!(tab.get_url().unwrap(), String::from("http://example.com/"));
-    assert_eq!(tab.get_title().unwrap(), String::from("Example Domain"));
+    catch_unwind(|| {
+        env_logger::init();
+    });
+    
+    for i in 0..2 {
+        let mut session = match i {
+            0 => {
+                info!("testing with Firefox");
+                Session::new(Browser::Firefox, false).unwrap()
+            },
+            _ => {
+                info!("testing with Chrome");
+                Session::new(Browser::Chrome, false).unwrap()
+            }
+        };
+
+        session.tabs[0].navigate("http://example.com/").unwrap(); // There is one tab already opened
+        assert_eq!(&session.tabs[0].get_url().unwrap(), "http://example.com/");
+        assert_eq!(&session.tabs[0].get_title().unwrap(), "Example Domain");
+    }
 }
 
 #[test]
 fn tabs() {
-    //env_logger::init();
-    let mut session = Session::new(BROWSER, false).expect("Echec de création de la session");
+    catch_unwind(|| {
+        env_logger::init();
+    });
+    
+    for i in 0..2 {
+        let mut session = match i {
+            0 => {
+                info!("testing with Firefox");
+                Session::new(Browser::Firefox, false).unwrap()
+            },
+            _ => {
+                info!("testing with Chrome");
+                Session::new(Browser::Chrome, false).unwrap()
+            }
+        };
 
-    let mut window1 = session.get_selected_tab().unwrap();
-    window1.navigate("https://www.mozilla.org/fr/").unwrap();
-    assert_eq!(window1.get_url().unwrap(), String::from("https://www.mozilla.org/fr/"));
+        session.tabs[0].navigate("https://mubelotix.dev/").unwrap(); // There is one tab already opened
+        assert_eq!(session.tabs.len(), 1);
 
-    let mut window2 = Tab::new(&mut session).unwrap();
-    window2.navigate("http://example.com/").unwrap();
-    assert_eq!(window2.get_url().unwrap(), String::from("http://example.com/"));
-    window1.navigate("https://www.google.com/").unwrap();
-    assert_eq!(window1.get_url().unwrap(), String::from("https://www.google.com/"));
+        session.open_tab().unwrap();
+        assert_eq!(session.tabs.len(), 2);
 
-    window2.close().unwrap();
-    window1.select().unwrap();
+        session.tabs[1].navigate("https://mubelotix.dev/webdriver_tests/open_tab.html").unwrap();
+        assert_eq!(session.tabs.len(), 2); // the website opened a tab but the webdriver ignore it, preventing using the wrong tab
+
+        session.update_tabs().unwrap();    // however we can ask the webdriver to update tabs
+        assert_eq!(session.tabs.len(), 3); // and the tab opened by the webdriver is accessible
+
+        session.tabs[2].close().unwrap();
+        assert_eq!(session.tabs.len(), 3); // closing a tab don't remove the tab object from the list! but don't use it anymore!
+    }
 }
 
 #[test]
 fn timeouts() {
-    //env_logger::init();
-    let mut session = Session::new(BROWSER, false).expect("Echec de création de la session");
-
-    let mut timeouts = session.get_timeouts().unwrap();
-    assert_eq!(Some(30000), timeouts.script);
-    assert_eq!(300_000, timeouts.page_load);
-    assert_eq!(0, timeouts.implicit);
+    catch_unwind(|| {
+        env_logger::init();
+    });
     
-    timeouts.script = None;
-    timeouts.page_load = 299_999;
-    timeouts.implicit = 1;
+    for i in 0..2 {
+        let mut session = match i {
+            0 => {
+                info!("testing with Firefox");
+                Session::new(Browser::Firefox, false).unwrap()
+            },
+            _ => {
+                info!("testing with Chrome");
+                Session::new(Browser::Chrome, false).unwrap()
+            }
+        };
 
-    session.set_timeouts(timeouts).unwrap();
+        let mut timeouts = session.get_timeouts().unwrap();
+        assert_eq!(Some(30000), timeouts.script);
+        assert_eq!(300_000, timeouts.page_load);
+        assert_eq!(0, timeouts.implicit);
+        
+        timeouts.script = None;
+        timeouts.page_load = 299_999;
+        timeouts.implicit = 1;
 
-    timeouts = session.get_timeouts().unwrap();
-    assert_eq!(None, timeouts.script);
-    assert_eq!(299_999, timeouts.page_load);
-    assert_eq!(1, timeouts.implicit);
+        session.set_timeouts(timeouts).unwrap();
+
+        timeouts = session.get_timeouts().unwrap();
+        assert_eq!(None, timeouts.script);
+        assert_eq!(299_999, timeouts.page_load);
+        assert_eq!(1, timeouts.implicit);
+    }
 }
 
 #[test]
 fn elements() {
-    //env_logger::init();
-    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
-
-    let mut tab = session.get_selected_tab().unwrap();
-    tab.navigate("https://www.mozilla.org/fr/").unwrap();
-
-    let mut element1 = tab.find(Selector::XPath, "//*[@id=\"id_email\"]").unwrap().unwrap();
-    let mut element2 = tab.find(Selector::XPath, "/html/body/div[3]/main/div[1]/div/aside/div[2]/form/fieldset/div/fieldset/p/label[2]").unwrap().unwrap();
+    catch_unwind(|| {
+        env_logger::init();
+    });
     
-    element1.type_text("test@example.com").unwrap();
-    assert_eq!("Texte", element2.get_text().unwrap());
-    element2.click().unwrap();
+    for i in 0..2 {
+        let mut session = match i {
+            0 => {
+                info!("testing with Firefox");
+                Session::new(Browser::Firefox, false).unwrap()
+            },
+            _ => {
+                info!("testing with Chrome");
+                Session::new(Browser::Chrome, false).unwrap()
+            }
+        };
+
+        session.tabs[0].navigate("https://www.mozilla.org/fr/").unwrap();
+
+        let mut element1 = session.tabs[0].find(Selector::XPath, "//*[@id=\"id_email\"]").unwrap().unwrap();
+        let mut element2 = session.tabs[0].find(Selector::XPath, "/html/body/div[3]/main/div[1]/div/aside/div[2]/form/fieldset/div/fieldset/p/label[2]").unwrap().unwrap();
+        
+        element1.type_text("test@example.com").unwrap();
+        assert_eq!("Texte", element2.get_text().unwrap());
+        element2.click().unwrap();
+    }
 }
 
 #[test]
 fn execute_javascript() {
-    //env_logger::init();
-    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
-
-    let mut tab = session.get_selected_tab().unwrap();
-    tab.navigate("http://example.com").unwrap();
-    thread::sleep(Duration::from_secs(1));
+    catch_unwind(|| {
+        env_logger::init();
+    });
     
-    tab.execute_script("document.querySelector(arguments[0]).click();", vec!["html>body>div>p>a"]).unwrap();
+    for i in 0..2 {
+        let mut session = match i {
+            0 => {
+                info!("testing with Firefox");
+                Session::new(Browser::Firefox, false).unwrap()
+            },
+            _ => {
+                info!("testing with Chrome");
+                Session::new(Browser::Chrome, false).unwrap()
+            }
+        };
 
-    thread::sleep(Duration::from_secs(10));
+        session.tabs[0].navigate("http://example.com").unwrap();
+        
+        session.tabs[0].execute_script("document.querySelector(arguments[0]).click();", vec!["html>body>div>p>a"]).unwrap();
+    }
 }
 
 #[test]
 fn element_obscured() {
-    env_logger::init();
-    let session = Session::new(BROWSER, false).expect("Echec de création de la session");
-
-    let mut tab = session.get_selected_tab().unwrap();
-    tab.navigate("https://mubelotix.dev/webdriver_tests/element_obscured.html").unwrap();
+    catch_unwind(|| {
+        env_logger::init();
+    });
     
-    let mut element = tab.find(Selector::XPath, "/html/body/p/a").unwrap().unwrap();
-    element.click().unwrap();
-    thread::sleep(Duration::from_secs(3));
+    for i in 0..2 {
+        let mut session = match i {
+            0 => {
+                info!("testing with Firefox");
+                Session::new(Browser::Firefox, false).unwrap()
+            },
+            _ => {
+                info!("testing with Chrome");
+                Session::new(Browser::Chrome, false).unwrap()
+            }
+        };
+
+        session.tabs[0].navigate("https://mubelotix.dev/webdriver_tests/element_obscured.html").unwrap();
+        
+        let mut element = session.tabs[0].find(Selector::XPath, "/html/body/p/a").unwrap().unwrap();
+        element.click().unwrap();
+    }
 }
