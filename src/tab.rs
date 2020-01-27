@@ -16,12 +16,10 @@ use crate::http_requests::{get_selected_tab, select_tab, navigate, close_active_
 /// ```rust
 /// # use lw_webdriver::{session::Session, enums::Browser};
 /// 
-/// let session = Session::new(Browser::Firefox, false).unwrap();
+/// let mut session = Session::new(Browser::Firefox, false).unwrap();
 /// 
-/// // when starting a session, browser open a tab wich is selected
-/// let mut default_window = session.get_selected_tab().unwrap(); 
-/// 
-/// default_window.navigate("https://www.mozilla.org/fr/").unwrap();
+/// // using the default tab
+/// session.tabs[0].navigate("https://www.mozilla.org/fr/").unwrap();
 /// ```
 pub struct Tab {
     pub(crate) id: String,

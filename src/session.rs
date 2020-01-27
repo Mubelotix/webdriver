@@ -13,6 +13,23 @@ use log::{debug, info, warn, error};
 use std::rc::Rc;
 use crate::http_requests::*;
 
+/// This is the more important object.
+/// Tabs can be accessed within the session.
+/// 
+/// # Example
+/// 
+/// ```rust
+/// use lw_webdriver::{session::Session, enums::Browser};
+/// 
+/// let mut session = Session::new(Browser::Firefox, false).unwrap();
+/// 
+/// // accessing default tab
+/// session.tabs[0].navigate("http://example.com/").unwrap();
+/// 
+/// // creating a new tab and access it
+/// session.open_tab().unwrap();
+/// session.tabs[1].navigate("https://mubelotix.dev/").unwrap();
+/// ```
 pub struct Session {
     id: Rc<String>,
     pub tabs: Vec<Tab>,
@@ -20,6 +37,18 @@ pub struct Session {
 }
 
 impl Session {
+    /// Create a session of a specific [browser](https://to.do/).
+    /// Headless mean that the browser will be opened but not displayed (useful for servers).
+    /// The crate will request a webdriver server at http://localhost:4444.
+    /// If no webdriver is listening, one will be launched, but the program ([geckodriver](https://to.do/) or [chromedriver](https://to.do/))
+    /// must be located at the same place than the running program.
+    /// 
+    /// # Example
+    /// 
+    /// ```rust
+    /// # use lw_webdriver::{session::Session, enums::Browser};
+    /// let mut session = Session::new(Browser::Firefox, false).unwrap();
+    /// ```
     pub fn new(browser: Browser, headless: bool) -> Result<Self, WebdriverError> {
         info!{"Creating a session..."};
         let result = Session::new_session(browser, headless);
@@ -145,6 +174,19 @@ impl Session {
         Ok(session)
     }
 
+    /// Create a new tab in the session.
+    /// The tab will be directly accessible from the session (no call to [update_tabs()](https://to.do/) needed).
+    /// 
+    /// # Example
+    /// 
+    /// ```rust
+    /// # use lw_webdriver::{session::Session, enums::Browser};
+    /// let mut session = Session::new(Browser::Firefox, false).unwrap();
+    /// 
+    /// assert_eq!(session.tabs.len(), 1); // default tab is already opened
+    /// session.open_tab().unwrap();
+    /// assert_eq!(session.tabs.len(), 2); // new tab is accessible
+    /// ```
     pub fn open_tab(&mut self) -> Result<usize, WebdriverError> {
         let tab_id = new_tab(&self.id)?;
         let new_tab = Tab::new_from(tab_id, Rc::clone(&self.id));
@@ -153,6 +195,39 @@ impl Session {
         Ok(self.tabs.len() - 1)
     }
 
+    /// When a tab is created with [open_tab()](https://to.do/) method, it is accessible directly.
+    /// But sometimes a tab is created by someone else (from a web page with javascript) and you don't want to care about it!
+    /// This tab will not be accessible by your program because you never asked it.
+    /// However if you want to access every open tab, call this function.
+    /// 
+    /// # Example
+    /// 
+    /// ```rust
+    /// # use lw_webdriver::{session::Session, enums::Browser};
+    /// # use std::thread::sleep;
+    /// # use std::time::Duration;
+    /// let mut session = Session::new(Browser::Firefox, false).unwrap();
+    /// 
+    /// // only the default tab is open
+    /// assert_eq!(session.tabs.len(), 1);
+    /// 
+    /// // load a website
+    /// session.tabs[0].navigate("https://mubelotix.dev/webdriver_tests/open_tab.html").unwrap();
+    /// 
+    /// // observe what is happening
+    /// sleep(Duration::from_secs(5));
+    /// 
+    /// // a tab has been opened by another tab but you never asked for it
+    /// // you can see two tabs displayed
+    /// // but this crate don't show the useless one
+    /// assert_eq!(session.tabs.len(), 1);
+    /// 
+    /// // if you want to access it, call this function
+    /// session.update_tabs().unwrap();
+    /// 
+    /// // now you can access two tabs!
+    /// assert_eq!(session.tabs.len(), 2);
+    /// ```
     pub fn update_tabs(&mut self) -> Result<(), WebdriverError> {
         let tabs_id = get_open_tabs(&self.id)?;
         for tab_id in tabs_id {
@@ -164,10 +239,12 @@ impl Session {
         Ok(())
     }
 
+    /// This is a simple method getting [timeouts](https://to.do/) of the session.
     pub fn get_timeouts(&self) -> Result<Timeouts, WebdriverError> {
         Ok(get_timeouts(&self.id)?)
     }
 
+    /// This is a simple method setting [timeouts](https://to.do/) of the session.
     pub fn set_timeouts(&mut self, timeouts: Timeouts) -> Result<(), WebdriverError> {
         Ok(set_timeouts(&self.id, timeouts)?)
     }

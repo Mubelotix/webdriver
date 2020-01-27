@@ -13,17 +13,15 @@ use lw_webdriver::{session::Session, enums::{Browser, Selector}};
 use std::{thread, time::Duration};
 
 // start session
-let session = Session::new(Browser::Firefox, false).unwrap();
+let mut session = Session::new(Browser::Firefox, false).unwrap();
 
 // load a website
-let mut tab = session.get_selected_tab().unwrap();
-tab.navigate("https://mubelotix.dev/").unwrap();
+session.tabs[0].navigate("https://mubelotix.dev/").unwrap();
 
 // click a link
-let mut link = tab.find(Selector::XPath, "//a[@href='https://www.kerbalspaceprogram.com/']").unwrap().unwrap();
+let mut link = session.tabs[0].find(Selector::XPath, "//a[@href='https://www.kerbalspaceprogram.com/']").unwrap().unwrap();
 link.click().unwrap();
 
-thread::sleep(Duration::from_secs(5));
 ```
 
 ## Running tests
