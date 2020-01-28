@@ -419,3 +419,92 @@ pub(crate) fn send_text_to_element(session_id: &str, element_id: &str, text: &st
         Err(WebdriverError::InvalidResponse)
     }
 }
+
+pub(crate) fn get_element_attribute(session_id: &str, element_id: &str, attribute_name: &str) -> Result<String, WebdriverError> {
+    debug!("getting attribute {} of element with id {} on session with id {}", attribute_name, session_id, element_id);
+
+    let json = get(&format!("http://localhost:4444/session/{}/element/{}/attribute/{}", session_id, element_id, attribute_name))?;
+
+    if json["value"].is_string() {
+        let value = json["value"].to_string();
+        debug!("attribute {} is {}", attribute_name, value);
+        Ok(value)
+    } else {
+        error!("response to get element attribute request was not understood: {}", json);
+        Err(WebdriverError::InvalidResponse)
+    }
+}
+
+pub(crate) fn get_element_property(session_id: &str, element_id: &str, property_name: &str) -> Result<String, WebdriverError> {
+    debug!("getting property {} of element with id {} on session with id {}", property_name, session_id, element_id);
+
+    let json = get(&format!("http://localhost:4444/session/{}/element/{}/property/{}", session_id, element_id, property_name))?;
+
+    if !json["value"].is_null() {
+        let value = json["value"].to_string();
+        debug!("property {} is {}", property_name, value);
+        Ok(value)
+    } else {
+        error!("response to get element property request was not understood: {}", json);
+        Err(WebdriverError::InvalidResponse)
+    }
+}
+
+pub(crate) fn get_element_css_value(session_id: &str, element_id: &str, property_name: &str) -> Result<String, WebdriverError> {
+    debug!("getting css value of property {} of element with id {} on session with id {}", property_name, session_id, element_id);
+
+    let json = get(&format!("http://localhost:4444/session/{}/element/{}/css/{}", session_id, element_id, property_name))?;
+
+    if json["value"].is_string() {
+        let value = json["value"].to_string();
+        debug!("css value for {} is {}", property_name, value);
+        Ok(value)
+    } else {
+        error!("response to get element css value request was not understood: {}", json);
+        Err(WebdriverError::InvalidResponse)
+    }
+}
+
+pub(crate) fn get_element_tag_name(session_id: &str, element_id: &str) -> Result<String, WebdriverError> {
+    debug!("getting tag name of element with id {} on session with id {}", session_id, element_id);
+
+    let json = get(&format!("http://localhost:4444/session/{}/element/{}/name", session_id, element_id))?;
+
+    if json["value"].is_string() {
+        let value = json["value"].to_string();
+        debug!("tag name is {}", value);
+        Ok(value)
+    } else {
+        error!("response to get element tag name request was not understood: {}", json);
+        Err(WebdriverError::InvalidResponse)
+    }
+}
+
+pub(crate) fn get_element_rect(session_id: &str, element_id: &str) -> Result<((usize, usize), (usize, usize)), WebdriverError> {
+    debug!("getting rect of element with id {} on session with id {}", session_id, element_id);
+
+    let json = get(&format!("http://localhost:4444/session/{}/element/{}/rect", session_id, element_id))?;
+
+    if json["value"]["x"].is_number() && json["value"]["y"].is_number() && json["value"]["width"].is_number() && json["value"]["height"].is_number() {
+        let value = ((json["value"]["x"].as_usize().unwrap(), json["value"]["y"].as_usize().unwrap()), (json["value"]["width"].as_usize().unwrap(), json["value"]["height"].as_usize().unwrap()));
+        debug!("rect is {:?}", value);
+        Ok(value)
+    } else {
+        error!("response to get element rect request was not understood: {}", json);
+        Err(WebdriverError::InvalidResponse)
+    }
+}
+
+pub(crate) fn is_element_enabled(session_id: &str, element_id: &str) -> Result<bool, WebdriverError> {
+    debug!("checking if element with id {} on session with id {} is enabled", element_id, session_id);
+
+    let json = get(&format!("http://localhost:4444/session/{}/element/{}/enabled", session_id, element_id))?;
+
+    if json["value"].is_boolean() {
+        let value = json["value"].as_bool().unwrap();
+        Ok(value)
+    } else {
+        error!("response to is element enabled request was not understood: {}", json);
+        Err(WebdriverError::InvalidResponse)
+    }
+}

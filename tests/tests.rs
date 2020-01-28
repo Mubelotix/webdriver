@@ -41,30 +41,6 @@ fn navigation() {
 }
 
 #[test]
-fn getters() {
-    catch_unwind(|| {
-        env_logger::init();
-    });
-    
-    for i in 0..2 {
-        let mut session = match i {
-            0 => {
-                info!("testing with Firefox");
-                Session::new(Browser::Firefox, false).unwrap()
-            },
-            _ => {
-                info!("testing with Chrome");
-                Session::new(Browser::Chrome, false).unwrap()
-            }
-        };
-
-        session.tabs[0].navigate("http://example.com/").unwrap(); // There is one tab already opened
-        assert_eq!(&session.tabs[0].get_url().unwrap(), "http://example.com/");
-        assert_eq!(&session.tabs[0].get_title().unwrap(), "Example Domain");
-    }
-}
-
-#[test]
 fn tabs() {
     catch_unwind(|| {
         env_logger::init();
@@ -153,11 +129,22 @@ fn elements() {
             }
         };
 
+        session.open_tab();
         session.tabs[0].navigate("https://www.mozilla.org/fr/").unwrap();
+        session.tabs[1].navigate("https://mubelotix.dev/").unwrap();
 
         session.tabs[0].find(Selector::XPath, "//*[@id=\"id_email\"]".to_string()).unwrap().unwrap();
         session.tabs[0].find(Selector::XPath, "/html/body/div[3]/main/div[1]/div/aside/div[2]/form/fieldset/div/fieldset/p/label[2]".to_string()).unwrap().unwrap();
         assert_eq!(session.tabs[0].elements.len(), 2);
+        assert_eq!(session.tabs[0].elements[0].get_tag_name().unwrap(), "input");
+        assert_eq!(session.tabs[0].elements[0].is_enabled().unwrap(), true);
+        assert!(session.tabs[0].elements[0].get_rect().is_ok());
+
+        session.tabs[1].find(Selector::XPath, "/html/body/main/div[1]".to_string()).unwrap();
+        assert_eq!(session.tabs[1].elements[0].get_tag_name().unwrap(), "div");
+        assert_eq!(session.tabs[1].elements[0].get_attribute("class").unwrap(), "project");
+        assert_eq!(session.tabs[1].elements[0].get_css_value("display").unwrap(), "flex");
+        assert_eq!(session.tabs[1].elements[0].get_property("draggable").unwrap(), "false");
 
         session.tabs[0].elements[0].type_text("test@example.com").unwrap();
         assert_eq!("Texte", session.tabs[0].elements[1].get_text().unwrap());

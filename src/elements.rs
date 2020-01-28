@@ -5,7 +5,8 @@ use json::*;
 use std::result::Result;
 use log::{debug, info, warn, error};
 use std::rc::Rc;
-use crate::http_requests::{execute_script_sync, click_on_element, get_element_text, send_text_to_element, get_selected_tab, select_tab};
+use crate::http_requests::{execute_script_sync, click_on_element, get_element_text, send_text_to_element, get_selected_tab, select_tab,
+    get_element_attribute, get_element_css_value, get_element_property, get_element_tag_name, is_element_enabled, get_element_rect};
 
 pub struct Element {
     id: String,
@@ -44,6 +45,36 @@ impl Element {
     pub fn get_text(&self) -> Result<String, WebdriverError> {
         self.select_tab()?;
         get_element_text(&self.session_id, &self.id)
+    }
+
+    pub fn get_attribute(&self, attribute_name: &str) -> Result<String, WebdriverError> {
+        self.select_tab()?;
+        get_element_attribute(&self.session_id, &self.id, attribute_name)
+    }
+
+    pub fn get_tag_name(&self) -> Result<String, WebdriverError> {
+        self.select_tab()?;
+        get_element_tag_name(&self.session_id, &self.id)
+    }
+
+    pub fn get_css_value(&self, property_name: &str) -> Result<String, WebdriverError> {
+        self.select_tab()?;
+        get_element_css_value(&self.session_id, &self.id, property_name)
+    }
+
+    pub fn get_property(&self, property_name: &str) -> Result<String, WebdriverError> {
+        self.select_tab()?;
+        get_element_property(&self.session_id, &self.id, property_name)
+    }
+
+    pub fn get_rect(&self) -> Result<((usize, usize), (usize, usize)), WebdriverError> {
+        self.select_tab()?;
+        get_element_rect(&self.session_id, &self.id)
+    }
+
+    pub fn is_enabled(&self) -> Result<bool, WebdriverError> {
+        self.select_tab()?;
+        is_element_enabled(&self.session_id, &self.id)
     }
 
     pub fn click(&mut self) -> Result<(), WebdriverError> {
