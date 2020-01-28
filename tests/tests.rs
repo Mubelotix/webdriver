@@ -155,12 +155,13 @@ fn elements() {
 
         session.tabs[0].navigate("https://www.mozilla.org/fr/").unwrap();
 
-        let mut element1 = session.tabs[0].find(Selector::XPath, "//*[@id=\"id_email\"]").unwrap().unwrap();
-        let mut element2 = session.tabs[0].find(Selector::XPath, "/html/body/div[3]/main/div[1]/div/aside/div[2]/form/fieldset/div/fieldset/p/label[2]").unwrap().unwrap();
-        
-        element1.type_text("test@example.com").unwrap();
-        assert_eq!("Texte", element2.get_text().unwrap());
-        element2.click().unwrap();
+        session.tabs[0].find(Selector::XPath, "//*[@id=\"id_email\"]".to_string()).unwrap().unwrap();
+        session.tabs[0].find(Selector::XPath, "/html/body/div[3]/main/div[1]/div/aside/div[2]/form/fieldset/div/fieldset/p/label[2]".to_string()).unwrap().unwrap();
+        assert_eq!(session.tabs[0].elements.len(), 2);
+
+        session.tabs[0].elements[0].type_text("test@example.com").unwrap();
+        assert_eq!("Texte", session.tabs[0].elements[1].get_text().unwrap());
+        session.tabs[0].elements[1].click().unwrap();
     }
 }
 
@@ -208,7 +209,7 @@ fn element_obscured() {
 
         session.tabs[0].navigate("https://mubelotix.dev/webdriver_tests/element_obscured.html").unwrap();
         
-        let mut element = session.tabs[0].find(Selector::XPath, "/html/body/p/a").unwrap().unwrap();
-        element.click().unwrap();
+        session.tabs[0].find(Selector::XPath, "/html/body/p/a".to_string()).unwrap().unwrap();
+        session.tabs[0].elements[0].click().unwrap();
     }
 }

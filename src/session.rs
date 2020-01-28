@@ -233,7 +233,7 @@ impl Session {
     pub fn update_tabs(&mut self) -> Result<(), WebdriverError> {
         let tabs_id = get_open_tabs(&self.id)?;
         for tab_id in tabs_id {
-            if self.tabs.iter().position(|element| element.id == tab_id).is_none() {
+            if self.tabs.iter().position(|element| *element.id == tab_id).is_none() {
                 self.tabs.push(Tab::new_from(tab_id, Rc::clone(&self.id)));
             }
         }

@@ -7,6 +7,7 @@ use crate::session::*;
 use crate::enums::*;
 use crate::error::*;
 use log::{info, error};
+use crate::elements::Element;
 use std::rc::Rc;
 use crate::http_requests::{get_selected_tab, select_tab, navigate, close_active_tab, find_element,
     get_active_tab_url, get_active_tab_title, back, forward, refresh, execute_script_sync};
@@ -22,14 +23,16 @@ use crate::http_requests::{get_selected_tab, select_tab, navigate, close_active_
 /// session.tabs[0].navigate("https://www.mozilla.org/fr/").unwrap();
 /// ```
 pub struct Tab {
-    pub(crate) id: String,
+    pub(crate) id: Rc<String>,
+    pub elements: Vec<Element>,
     pub(crate) session_id: Rc<String>
 }
 
 impl Tab {
     pub fn new_from(id: String, session_id: Rc<String>) -> Tab {
         Tab {
-            id,
+            id: Rc::new(id),
+            elements: Vec::new(),
             session_id
         }
     }
@@ -50,7 +53,7 @@ impl Tab {
     pub fn select(&self) -> Result<(), WebdriverError> {
         // check if it is needed to select the tab
         if let Ok(id) = get_selected_tab(&self.session_id) {
-            if id == self.id {
+            if id == *self.id {
                 return Ok(());
             }
         }
@@ -66,11 +69,12 @@ impl Tab {
     }
 
     /// Find an element in the tab, selected by a [Selector](../enums/enum.Selector.html).
-    pub fn find<'a>(&'a self, selector: Selector, tofind: &'a str) -> Result<Option<Element<'a>>, WebdriverError> {
+    pub fn find(&mut self, selector: Selector, tofind: String) -> Result<Option<usize>, WebdriverError> {
         self.select()?;
-        match find_element(&self.session_id, selector, tofind) {
+        match find_element(&self.session_id, selector, &tofind) {
             Ok(id) => {
-                Ok(Some(Element::new(id, &self, (selector, tofind))))
+                self.elements.push(Element::new(id, Rc::clone(&self.session_id), Rc::clone(&self.id), (selector, tofind)));
+                Ok(Some(self.elements.len() - 1))
             },
             Err(error) if error == WebdriverError::NoSuchElement => {
                 Ok(None)
