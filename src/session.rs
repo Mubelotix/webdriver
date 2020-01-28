@@ -32,6 +32,8 @@ use crate::http_requests::*;
 /// ```
 pub struct Session {
     id: Rc<String>,
+    /// Contains every manually created tabs and default tab.
+    /// Do not contains tabs created by web pages with javascript unless you call [update_tabs()](https://to.do/).
     pub tabs: Vec<Tab>,
     webdriver_process: Option<std::process::Child>,
 }
@@ -265,9 +267,7 @@ impl WebdriverObject for Session {
 impl Drop for Session {
     #[allow(unused_must_use)]
     fn drop(&mut self) {
-        for tab in &mut self.tabs {
-            tab.close();
-        }
+        self.tabs.clear();
         if self.webdriver_process.is_some() {
             warn!("Killing webdriver process (may fail silently)");
             self.webdriver_process.take().unwrap().kill();

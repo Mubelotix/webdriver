@@ -94,8 +94,8 @@ fn tabs() {
         session.update_tabs().unwrap();    // however we can ask the webdriver to update tabs
         assert_eq!(session.tabs.len(), 3); // and the tab opened by the webdriver is accessible
 
-        session.tabs[2].close().unwrap();
-        assert_eq!(session.tabs.len(), 3); // closing a tab don't remove the tab object from the list! but don't use it anymore!
+        session.tabs.remove(2);            // drop the tab => close the tab
+        assert_eq!(session.tabs.len(), 2);
     }
 }
 

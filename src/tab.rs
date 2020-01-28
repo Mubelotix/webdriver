@@ -65,12 +65,6 @@ impl Tab {
         navigate(&self.session_id, url)
     }
 
-    /// Close the tab.
-    pub fn close(&mut self) -> Result<(), WebdriverError> {
-        self.select()?;
-        close_active_tab(&self.session_id)
-    }
-
     /// Find an element in the tab, selected by a [Selector](../enums/enum.Selector.html).
     pub fn find<'a>(&'a self, selector: Selector, tofind: &'a str) -> Result<Option<Element<'a>>, WebdriverError> {
         self.select()?;
@@ -133,5 +127,14 @@ impl PartialEq for Tab {
 impl WebdriverObject for Tab {
     fn get_id(&self) -> &String {
         &self.id
+    }
+}
+
+impl Drop for Tab {
+    #[allow(unused_must_use)]
+    fn drop(&mut self) {
+        if let Ok(()) = self.select() {
+            close_active_tab(&self.session_id);
+        }
     }
 }
