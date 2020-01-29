@@ -10,7 +10,7 @@ use log::{info, error};
 use crate::elements::Element;
 use std::rc::Rc;
 use crate::http_requests::{get_selected_tab, select_tab, navigate, close_active_tab, find_element,
-    get_active_tab_url, get_active_tab_title, back, forward, refresh, execute_script_sync};
+    get_active_tab_url, get_active_tab_title, back, forward, refresh, execute_script_sync, get_all_cookies, set_cookie};
 
 /// Tabs are used to load a site and get informations.
 /// 
@@ -115,10 +115,27 @@ impl Tab {
         refresh(&self.session_id)
     }
 
-    // TODO mutability
-    pub fn execute_script(&mut self, script: &str, args: Vec<&str>) -> Result<(), WebdriverError> {
+    pub fn execute_script(&self, script: &str, args: Vec<&str>) -> Result<(), WebdriverError> {
         self.select()?;
         execute_script_sync(&self.session_id, script, args)
+    }
+
+    pub fn get_cookies(&self) -> Result<Vec<(String, usize, bool, String, String, bool, String)>, WebdriverError> {
+        self.select()?;
+        get_all_cookies(&self.session_id)
+    }
+
+    pub fn set_cookie(&self, cookie: (String, usize, bool, String, String, bool, String)) -> Result<(), WebdriverError> {
+        self.select()?;
+        set_cookie(&self.session_id, cookie)
+    }
+
+    pub fn set_cookies(&self, cookies: Vec<(String, usize, bool, String, String, bool, String)>) -> Result<(), WebdriverError> {
+        self.select()?;
+        for cookie in cookies {
+            set_cookie(&self.session_id, cookie)?
+        }
+        Ok(())
     }
 }
 

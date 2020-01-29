@@ -508,3 +508,54 @@ pub(crate) fn is_element_enabled(session_id: &str, element_id: &str) -> Result<b
         Err(WebdriverError::InvalidResponse)
     }
 }
+
+pub(crate) fn get_all_cookies(session_id: &str) -> Result<Vec<(String, usize, bool, String, String, bool, String)>, WebdriverError> {
+    debug!("getting cookies on session with id {}", session_id);
+
+    let json = get(&format!("http://localhost:4444/session/{}/cookie", session_id))?;
+
+    if json["value"].is_array() {
+        let mut i = 0;
+        let mut cookies = Vec::new();
+        while json["value"][i].is_object() {
+            if let (domain, Some(expiry), Some(http_only), name, path, Some(secure), value) =
+            (json["value"][i]["domain"].to_string(), json["value"][i]["expiry"].as_usize(), json["value"][i]["httpOnly"].as_bool(), json["value"][i]["name"].to_string(), json["value"][i]["path"].to_string(), json["value"][i]["secure"].as_bool(), json["value"][i]["value"].to_string()) {
+                cookies.push((domain, expiry, http_only, name, path, secure, value))
+            } else {
+                warn!("a cookie was invalid; result: {:?}", (json["value"][i]["domain"].to_string(), json["value"][i]["expiry"].as_usize(), json["value"][i]["httpOnly"].as_bool(), json["value"][i]["name"].to_string(), json["value"][i]["path"].to_string(), json["value"][i]["secure"].as_bool(), json["value"][i]["value"].to_string()))
+            }
+            i += 1;
+        }
+        
+        debug!("cookies: {:?}", cookies);
+
+        Ok(cookies)
+    } else {
+        error!("response to cookies request was not understood: {}", json);
+        Err(WebdriverError::InvalidResponse)
+    }
+}
+
+pub(crate) fn set_cookie(session_id: &str, cookie: (String, usize, bool, String, String, bool, String)) -> Result<(), WebdriverError> {
+    debug!("setting cookie {} to {} on session with id {}", cookie.3, cookie.6, session_id);
+
+    let json = post(&format!("http://localhost:4444/session/{}/cookie", session_id), &object!{
+        "cookie" => object!{
+            "domain" => cookie.0,
+            "expiry" => cookie.1,
+            "httpOnly" => cookie.2,
+            "name" => cookie.3,
+            "path" => cookie.4,
+            "secure" => cookie.5,
+            "value" => cookie.6
+        }
+    }.to_string())?;
+
+    if json["value"].is_null() {
+        debug!("success");
+        Ok(())
+    } else {
+        error!("response to add cookie request was not understood: {}", json);
+        Err(WebdriverError::InvalidResponse)
+    }
+}
