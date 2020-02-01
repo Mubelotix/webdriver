@@ -559,3 +559,18 @@ pub(crate) fn set_cookie(session_id: &str, cookie: (String, usize, bool, String,
         Err(WebdriverError::InvalidResponse)
     }
 }
+
+pub(crate) fn get_page_source(session_id: &str) -> Result<String, WebdriverError> {
+    debug!("getting page source of active tab on session with id {}", session_id);
+
+    let json = get(&format!("http://localhost:4444/session/{}/source", session_id))?;
+
+    if json["value"].is_string() {
+        let source = json["value"].to_string();
+        debug!("page source is {}", source);
+        return Ok(source)
+    } else {
+        error!("response to page source request was not understood: {}", json);
+        Err(WebdriverError::InvalidResponse)
+    }
+}

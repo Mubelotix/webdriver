@@ -67,6 +67,9 @@ fn tabs() {
         session.tabs[1].navigate("https://mubelotix.dev/webdriver_tests/open_tab.html").unwrap();
         assert_eq!(session.tabs.len(), 2); // the website opened a tab but the webdriver ignore it, preventing using the wrong tab
 
+        let source = session.tabs[1].get_page_source().unwrap();
+        assert!(source.len() > 100);
+
         session.update_tabs().unwrap();    // however we can ask the webdriver to update tabs
         assert_eq!(session.tabs.len(), 3); // and the tab opened by the webdriver is accessible
 
