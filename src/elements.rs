@@ -104,7 +104,7 @@ impl Element {
     }
 
     pub fn scroll_into_view(&self) -> Result<(), WebdriverError> {
-        execute_script_sync(&self.session_id, "", vec![self.as_json_object()])
+        execute_script_sync(&self.session_id, "arguments[0].scrollIntoView();", vec![self.as_json_object()])
     }
 }
 
