@@ -137,22 +137,21 @@ fn elements() {
         session.tabs[0].navigate("https://www.mozilla.org/fr/").unwrap();
         session.tabs[1].navigate("https://mubelotix.dev/").unwrap();
 
-        session.tabs[0].find(Selector::XPath, "//*[@id=\"id_email\"]").unwrap().unwrap();
-        session.tabs[0].find(Selector::XPath, "/html/body/div[3]/main/div[1]/div/aside/div[2]/form/fieldset/div/fieldset/p/label[2]").unwrap().unwrap();
-        assert_eq!(session.tabs[0].elements.len(), 2);
-        assert_eq!(session.tabs[0].elements[0].get_tag_name().unwrap(), "input");
-        assert_eq!(session.tabs[0].elements[0].is_enabled().unwrap(), true);
-        assert!(session.tabs[0].elements[0].get_rect().is_ok());
+        let mut email_input = session.tabs[0].find(Selector::XPath, "//*[@id=\"id_email\"]").unwrap().unwrap();
+        let mut label = session.tabs[0].find(Selector::XPath, "/html/body/div[3]/main/div[1]/div/aside/div[2]/form/fieldset/div/fieldset/p/label[2]").unwrap().unwrap();
+        assert_eq!(email_input.get_tag_name().unwrap(), "input");
+        assert_eq!(email_input.is_enabled().unwrap(), true);
+        assert!(email_input.get_rect().is_ok());
 
-        session.tabs[1].find(Selector::XPath, "/html/body/main/div[1]").unwrap();
-        assert_eq!(session.tabs[1].elements[0].get_tag_name().unwrap(), "div");
-        assert_eq!(session.tabs[1].elements[0].get_attribute("class").unwrap(), "project");
-        assert_eq!(session.tabs[1].elements[0].get_css_value("display").unwrap(), "flex");
-        assert_eq!(session.tabs[1].elements[0].get_property("draggable").unwrap(), "false");
+        let project_element = session.tabs[1].find(Selector::XPath, "/html/body/main/div[1]").unwrap().unwrap();
+        assert_eq!(project_element.get_tag_name().unwrap(), "div");
+        assert_eq!(project_element.get_attribute("class").unwrap(), "project");
+        assert_eq!(project_element.get_css_value("display").unwrap(), "flex");
+        assert_eq!(project_element.get_property("draggable").unwrap(), "false");
 
-        session.tabs[0].elements[0].type_text("test@example.com").unwrap();
-        assert_eq!("Texte", session.tabs[0].elements[1].get_text().unwrap());
-        session.tabs[0].elements[1].click().unwrap();
+        email_input.type_text("test@example.com").unwrap();
+        assert_eq!("Texte", label.get_text().unwrap());
+        label.click().unwrap();
     }
 }
 
@@ -175,8 +174,8 @@ fn execute_javascript() {
         };
 
         session.tabs[0].navigate("http://example.com").unwrap();
-        let element_id = session.tabs[0].find(Selector::Css, "html>body>div>p>a").unwrap().unwrap();
-        session.tabs[0].execute_script("arguments[0].click();", vec![session.tabs[0].elements[element_id].as_json_object()]).unwrap();
+        let element = session.tabs[0].find(Selector::Css, "html>body>div>p>a").unwrap().unwrap();
+        session.tabs[0].execute_script("arguments[0].click();", vec![element.as_json_object()]).unwrap();
     }
 }
 
@@ -200,7 +199,7 @@ fn element_obscured() {
 
         session.tabs[0].navigate("https://mubelotix.dev/webdriver_tests/element_obscured.html").unwrap();
         
-        session.tabs[0].find(Selector::XPath, "/html/body/p/a").unwrap().unwrap();
-        session.tabs[0].elements[0].click().unwrap();
+        let mut element_obscured = session.tabs[0].find(Selector::XPath, "/html/body/p/a").unwrap().unwrap();
+        element_obscured.click().unwrap();
     }
 }

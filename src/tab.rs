@@ -24,7 +24,6 @@ use crate::http_requests::{get_selected_tab, select_tab, navigate, close_active_
 /// ```
 pub struct Tab {
     pub(crate) id: Rc<String>,
-    pub elements: Vec<Element>,
     pub(crate) session_id: Rc<String>
 }
 
@@ -32,7 +31,6 @@ impl Tab {
     pub fn new_from(id: String, session_id: Rc<String>) -> Tab {
         Tab {
             id: Rc::new(id),
-            elements: Vec::new(),
             session_id
         }
     }
@@ -69,12 +67,11 @@ impl Tab {
     }
 
     /// Find an element in the tab, selected by a [Selector](../enums/enum.Selector.html).
-    pub fn find(&mut self, selector: Selector, tofind: &str) -> Result<Option<usize>, WebdriverError> {
+    pub fn find(&mut self, selector: Selector, tofind: &str) -> Result<Option<Element>, WebdriverError> {
         self.select()?;
         match find_element(&self.session_id, selector, &tofind) {
             Ok(id) => {
-                self.elements.push(Element::new(id, Rc::clone(&self.session_id), Rc::clone(&self.id)));
-                Ok(Some(self.elements.len() - 1))
+                Ok(Some(Element::new(id, Rc::clone(&self.session_id), Rc::clone(&self.id))))
             },
             Err(error) if error == WebdriverError::NoSuchElement => {
                 Ok(None)

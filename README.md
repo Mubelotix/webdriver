@@ -19,8 +19,8 @@ let mut session = Session::new(Browser::Firefox, false).unwrap();
 session.tabs[0].navigate("https://mubelotix.dev/").unwrap();
 
 // click a link
-let mut element_id = session.tabs[0].find(Selector::XPath, "//a[@href='https://www.kerbalspaceprogram.com/']").unwrap().unwrap();
-session.tabs[0].elements[element_id].click().unwrap();
+let mut element = session.tabs[0].find(Selector::XPath, "//a[@href='https://www.kerbalspaceprogram.com/']").unwrap().unwrap();
+element.click().unwrap();
 
 ```
 
