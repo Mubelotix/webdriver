@@ -11,17 +11,15 @@ use crate::http_requests::{execute_script_sync, click_on_element, get_element_te
 pub struct Element {
     id: String,
     session_id: Rc<String>,
-    tab_id: Rc<String>,
-    stored_selector: (Selector, String)
+    tab_id: Rc<String>
 }
 
 impl Element {
-    pub fn new(id: String, session_id: Rc<String>, tab_id: Rc<String>, selector: (Selector, String)) -> Self {
+    pub fn new(id: String, session_id: Rc<String>, tab_id: Rc<String>) -> Self {
         Element{
             id,
             session_id,
-            tab_id,
-            stored_selector: selector
+            tab_id
         }
     }
 
@@ -82,7 +80,7 @@ impl Element {
         
         // TODO watch the bug
         warn!("Using javascript click because of a bug in geckodriver where and error hapen but is not reported to us.");
-        if let Ok(()) = execute_script_sync(&self.session_id, "var element = document.evaluate(arguments[0], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;element.click();", vec![&self.stored_selector.1]) {
+        if let Ok(()) = execute_script_sync(&self.session_id, "arguments[0].click();", vec![self.as_json_object()]) {
             return Ok(());
         } else {
             error!("Failed to click with javascript. Using normal method.");
@@ -99,6 +97,14 @@ impl Element {
                 return Err(error)
             }
         }
+    }
+
+    pub fn as_json_object(&self) -> JsonValue {
+        object!{ "element-6066-11e4-a52e-4f735466cecf" => self.id.as_str() }
+    }
+
+    pub fn scroll_into_view(&self) -> Result<(), WebdriverError> {
+        execute_script_sync(&self.session_id, "", vec![self.as_json_object()])
     }
 }
 

@@ -357,7 +357,7 @@ pub(crate) fn refresh(session_id: &str) -> Result<(), WebdriverError> {
 
 /// -> take session id, script and args
 /// execute the script on the active tab
-pub(crate) fn execute_script_sync(session_id: &str, script: &str, args: Vec<&str>) -> Result<(), WebdriverError> {
+pub(crate) fn execute_script_sync(session_id: &str, script: &str, args: Vec<JsonValue>) -> Result<(), WebdriverError> {
     debug!("executing script on selected tab on session with id {}", session_id);
 
     let json = post(&format!("http://localhost:4444/session/{}/execute/sync", session_id), &object!{

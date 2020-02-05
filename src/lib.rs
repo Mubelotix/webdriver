@@ -17,7 +17,7 @@
 //! session.tabs[0].navigate("https://mubelotix.dev/").unwrap();
 //!
 //! // click a link
-//! let mut element_id = session.tabs[0].find(Selector::XPath, "//a[@href='https://www.kerbalspaceprogram.com/']".to_string()).unwrap().unwrap();
+//! let mut element_id = session.tabs[0].find(Selector::XPath, "//a[@href='https://www.kerbalspaceprogram.com/']").unwrap().unwrap();
 //! session.tabs[0].elements[element_id].click().unwrap();
 //!
 //! # thread::sleep(Duration::from_secs(5));

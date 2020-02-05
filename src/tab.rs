@@ -69,11 +69,11 @@ impl Tab {
     }
 
     /// Find an element in the tab, selected by a [Selector](../enums/enum.Selector.html).
-    pub fn find(&mut self, selector: Selector, tofind: String) -> Result<Option<usize>, WebdriverError> {
+    pub fn find(&mut self, selector: Selector, tofind: &str) -> Result<Option<usize>, WebdriverError> {
         self.select()?;
         match find_element(&self.session_id, selector, &tofind) {
             Ok(id) => {
-                self.elements.push(Element::new(id, Rc::clone(&self.session_id), Rc::clone(&self.id), (selector, tofind)));
+                self.elements.push(Element::new(id, Rc::clone(&self.session_id), Rc::clone(&self.id)));
                 Ok(Some(self.elements.len() - 1))
             },
             Err(error) if error == WebdriverError::NoSuchElement => {
@@ -115,7 +115,7 @@ impl Tab {
         refresh(&self.session_id)
     }
 
-    pub fn execute_script(&self, script: &str, args: Vec<&str>) -> Result<(), WebdriverError> {
+    pub fn execute_script(&self, script: &str, args: Vec<JsonValue>) -> Result<(), WebdriverError> {
         self.select()?;
         execute_script_sync(&self.session_id, script, args)
     }
