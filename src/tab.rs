@@ -67,7 +67,7 @@ impl Tab {
         tofind: &str,
     ) -> Result<Option<Element>, WebdriverError> {
         self.select()?;
-        match find_element(&self.session_id, selector, &tofind) {
+        match find_element(&self.session_id, &selector, &tofind) {
             Ok(id) => Ok(Some(Element::new(
                 id,
                 Rc::clone(&self.session_id),

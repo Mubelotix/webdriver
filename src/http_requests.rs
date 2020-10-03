@@ -322,7 +322,7 @@ pub(crate) fn close_active_tab(session_id: &str) -> Result<(), WebdriverError> {
 /// -> return id of the first element found
 pub(crate) fn find_element(
     session_id: &str,
-    selector: Selector,
+    selector: &Selector,
     value: &str,
 ) -> Result<String, WebdriverError> {
     let selector: &str = selector.into();

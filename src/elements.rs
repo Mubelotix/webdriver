@@ -5,12 +5,7 @@ use std::{rc::Rc, result::Result};
 use crate::{
     enums::WebdriverObject,
     error::*,
-    http_requests::{
-        click_on_element, execute_script_sync, get_element_attribute, get_element_css_value,
-        get_element_property, get_element_rect, get_element_tag_name, get_element_text,
-        get_selected_tab, is_element_enabled, select_tab, send_text_to_element, switch_to_frame,
-        ElementRect,
-    },
+    http_requests::*,
 };
 
 pub const ELEMENT_ID: &str = "element-6066-11e4-a52e-4f735466cecf";
@@ -22,7 +17,7 @@ pub struct Element {
 }
 
 impl Element {
-    pub fn new(id: String, session_id: Rc<String>, tab_id: Rc<String>) -> Self {
+    pub(crate) fn new(id: String, session_id: Rc<String>, tab_id: Rc<String>) -> Self {
         Element {
             id,
             session_id,
@@ -30,15 +25,7 @@ impl Element {
         }
     }
 
-    fn select_tab(&self) -> Result<(), WebdriverError> {
-        // check if it is needed to select the tab
-        if let Ok(id) = get_selected_tab(&self.session_id) {
-            if id == *self.tab_id {
-                return Ok(());
-            }
-        }
-
-        // select tab
+    pub fn select_tab(&self) -> Result<(), WebdriverError> {
         select_tab(&self.session_id, &self.tab_id)
     }
 
@@ -126,7 +113,7 @@ impl Element {
 
 impl PartialEq for Element {
     fn eq(&self, other: &Self) -> bool {
-        self.get_id() == other.get_id()
+        self.id == other.id
     }
 }
 

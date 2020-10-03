@@ -7,7 +7,7 @@ pub enum Selector {
     PartialLinkText,
 }
 
-impl Into<&str> for Selector {
+impl Into<&'static str> for &Selector {
     fn into(self) -> &'static str {
         match self {
             Selector::Css => "css selector",
