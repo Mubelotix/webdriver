@@ -3,7 +3,6 @@
 use lw_webdriver::session::*;
 use lw_webdriver::enums::*;
 use std::panic::catch_unwind;
-use json::object;
 use log::{info};
 
 #[test]

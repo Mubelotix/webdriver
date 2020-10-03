@@ -1,6 +1,6 @@
 //! Sessions allow you to control tabs
 
-use json::*;
+use serde_json::*;
 use std::time::Duration;
 use std::result::Result;
 use crate::enums::*;
@@ -115,50 +115,50 @@ impl Session {
         let post_data = match browser {
             Browser::Firefox => {
                 if headless {
-                    object!{
-                        "capabilities" => object!{
-                            "alwaysMatch" => object!{
-                                "platformName" => platform.to_string(),
-                                "browserName" => browser.to_string(),
-                                "moz:firefoxOptions" => object! {
-                                    "args" => array!{"-headless"}
+                    json!({
+                        "capabilities": {
+                            "alwaysMatch": {
+                                "platformName": platform.to_string(),
+                                "browserName": browser.to_string(),
+                                "moz:firefoxOptions": {
+                                    "args": ["-headless"]
                                 },
                             }
                         }
-                    }
+                    })
                 } else {
-                    object!{
-                        "capabilities" => object!{
-                            "alwaysMatch" => object!{
-                                "platformName" => platform.to_string(),
-                                "browserName" => browser.to_string()
+                    json!({
+                        "capabilities": {
+                            "alwaysMatch": {
+                                "platformName": platform.to_string(),
+                                "browserName": browser.to_string()
                             }
                         }
-                    }
+                    })
                 }
             },
             Browser::Chrome => {
                 if headless {
-                    object!{
-                        "capabilities" => object!{
-                            "alwaysMatch" => object!{
-                                "platformName" => platform.to_string(),
-                                "browserName" => browser.to_string(),
-                                "goog:chromeOptions" => object! {
-                                    "args" => array!{"-headless"}
+                    json!({
+                        "capabilities": {
+                            "alwaysMatch": {
+                                "platformName": platform.to_string(),
+                                "browserName": browser.to_string(),
+                                "goog:chromeOptions": {
+                                    "args": ["-headless"]
                                 }
                             }
                         }
-                    }
+                    })
                 } else {
-                    object!{
-                        "capabilities" => object!{
-                            "alwaysMatch" => object!{
-                                "platformName" => platform.to_string(),
-                                "browserName" => browser.to_string()
+                    json!({
+                        "capabilities": {
+                            "alwaysMatch": {
+                                "platformName": platform.to_string(),
+                                "browserName": browser.to_string()
                             }
                         }
-                    }
+                    })
                 }
             }
         };

@@ -9,8 +9,8 @@ pub enum Selector {
     PartialLinkText
 }
 
-impl Selector {
-    pub fn to_string(self) -> &'static str {
+impl Into<&str> for Selector {
+    fn into(self) -> &'static str {
         match self {
             Selector::Css => "css selector",
             Selector::XPath => "xpath",
