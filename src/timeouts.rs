@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::*;
 
 #[derive(Copy, Clone, Serialize, Debug, PartialEq)]

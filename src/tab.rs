@@ -19,13 +19,15 @@ use crate::{elements::Element, enums::*, error::*, http_requests::*, session::*}
 pub struct Tab {
     pub(crate) id: Rc<String>,
     pub(crate) session_id: Rc<String>,
+    pub(crate) close_on_drop: bool,
 }
 
 impl Tab {
-    pub fn new_from(id: String, session_id: Rc<String>) -> Tab {
+    pub fn new_from(id: String, session_id: Rc<String>, close_on_drop: bool) -> Tab {
         Tab {
             id: Rc::new(id),
             session_id,
+            close_on_drop
         }
     }
 
@@ -35,9 +37,9 @@ impl Tab {
 
     /// Create a new tab in a session.
     /// This return an immutable reference (in a Result) because the tab is stored in the session.
-    pub fn new(session: &mut Session) -> Result<&Tab, WebdriverError> {
-        let tab_id = session.open_tab()?;
-        Ok(&session.tabs[tab_id])
+    pub fn new(session: &mut Session) -> Result<Tab, WebdriverError> {
+        let tab = session.open_tab()?;
+        Ok(tab)
     }
 
     /// Select this tab.
@@ -163,8 +165,10 @@ impl WebdriverObject for Tab {
 impl Drop for Tab {
     #[allow(unused_must_use)]
     fn drop(&mut self) {
-        if let Ok(()) = self.select() {
-            close_active_tab(&self.session_id);
+        if self.close_on_drop {
+            if let Ok(()) = self.select() {
+                close_active_tab(&self.session_id);
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ use crate::error::*;
 use crate::http_requests::*;
 use crate::tab::*;
 use crate::timeouts::*;
+#[allow(unused_imports)]
 use log::{debug, error, info, warn};
 use serde_json::*;
 use std::process::{Command, Stdio};
@@ -32,9 +33,6 @@ use std::time::Duration;
 /// ```
 pub struct Session {
     id: Rc<String>,
-    /// Contains every manually created tabs and default tab.
-    /// Do not contains tabs created by web pages with javascript unless you call [update_tabs()](https://to.do/).
-    pub tabs: Vec<Tab>,
     webdriver_process: Option<std::process::Child>,
 }
 
@@ -167,7 +165,6 @@ impl Session {
         let session_id = new_session(&post_data.to_string())?;
         let mut session = Session {
             id: Rc::new(session_id),
-            tabs: Vec::new(),
             webdriver_process: None,
         };
 
@@ -189,12 +186,10 @@ impl Session {
     /// session.open_tab().unwrap();
     /// assert_eq!(session.tabs.len(), 2); // new tab is accessible
     /// ```
-    pub fn open_tab(&mut self) -> Result<usize, WebdriverError> {
+    pub fn open_tab(&mut self) -> Result<Tab, WebdriverError> {
         let tab_id = new_tab(&self.id)?;
-        let new_tab = Tab::new_from(tab_id, Rc::clone(&self.id));
-        self.tabs.push(new_tab);
 
-        Ok(self.tabs.len() - 1)
+        Ok(Tab::new_from(tab_id, Rc::clone(&self.id), true))
     }
 
     /// When a tab is created with [open_tab()](https://to.do/) method, it is accessible directly.
@@ -230,20 +225,13 @@ impl Session {
     /// // now you can access two tabs!
     /// assert_eq!(session.tabs.len(), 2);
     /// ```
-    pub fn update_tabs(&mut self) -> Result<(), WebdriverError> {
-        let tabs_id = get_open_tabs(&self.id)?;
-        for tab_id in tabs_id {
-            if self
-                .tabs
-                .iter()
-                .position(|element| *element.id == tab_id)
-                .is_none()
-            {
-                self.tabs.push(Tab::new_from(tab_id, Rc::clone(&self.id)));
-            }
+    pub fn update_tabs(&mut self) -> Result<Vec<Tab>, WebdriverError> {
+        let mut tabs = Vec::new();
+        for tab_id in get_open_tabs(&self.id)? {
+            tabs.push(Tab::new_from(tab_id, Rc::clone(&self.id), false));
         }
 
-        Ok(())
+        Ok(tabs)
     }
 
     /// This is a simple method getting [timeouts](https://to.do/) of the session.
@@ -272,7 +260,6 @@ impl WebdriverObject for Session {
 impl Drop for Session {
     #[allow(unused_must_use)]
     fn drop(&mut self) {
-        self.tabs.clear();
         if self.webdriver_process.is_some() {
             warn!("Killing webdriver process (may fail silently)");
             self.webdriver_process.take().unwrap().kill();
