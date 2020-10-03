@@ -1,9 +1,6 @@
+use crate::{elements::ELEMENT_ID, enums::Selector, error::WebdriverError, timeouts::Timeouts};
 use log::{debug, error, warn};
 use serde_json::{self, json, Value};
-
-use crate::{elements::ELEMENT_ID, enums::Selector, error::WebdriverError, timeouts::Timeouts};
-
-const AS_USIZE: fn(u64) -> usize = |value| value as usize;
 
 type MinReqResult = Result<minreq::Response, minreq::Error>;
 
@@ -63,7 +60,13 @@ fn delete(url: &str) -> Result<Value, WebdriverError> {
 
 #[test]
 fn test() {
-    println!("{:?}",post("http://localhost:4444/session/b1191cdf-b297-4fb3-b073-f1dc28e9adde/window/new", "{}"));
+    println!(
+        "{:?}",
+        post(
+            "http://localhost:4444/session/b1191cdf-b297-4fb3-b073-f1dc28e9adde/window/new",
+            "{}"
+        )
+    );
 }
 
 /// -> take capabilities (options)
@@ -97,7 +100,10 @@ pub(crate) fn new_session(capabilities: &str) -> Result<String, WebdriverError> 
 pub(crate) fn new_tab(session_id: &str) -> Result<String, WebdriverError> {
     debug!("tab creation request on session with id {}", session_id);
 
-    debug!("url {:?}", format!("http://localhost:4444/session/{}/window/new", session_id));
+    debug!(
+        "url {:?}",
+        format!("http://localhost:4444/session/{}/window/new", session_id)
+    );
     let json = post(
         &format!("http://localhost:4444/session/{}/window/new", session_id),
         "{}\n",
@@ -123,10 +129,13 @@ pub(crate) fn new_tab(session_id: &str) -> Result<String, WebdriverError> {
 pub(crate) fn get_open_tabs(session_id: &str) -> Result<Vec<String>, WebdriverError> {
     debug!("getting ids of open tabs on session with id {}", session_id);
 
-    debug!("url {:?}", format!(
-        "http://localhost:4444/session/{}/window/handles",
-        session_id
-    ));
+    debug!(
+        "url {:?}",
+        format!(
+            "http://localhost:4444/session/{}/window/handles",
+            session_id
+        )
+    );
     let json = get(&format!(
         "http://localhost:4444/session/{}/window/handles",
         session_id
@@ -199,9 +208,9 @@ pub(crate) fn get_timeouts(session_id: &str) -> Result<Timeouts, WebdriverError>
         let script_value = &value["script"];
 
         let timeouts = Timeouts {
-            script: script_value.as_u64().map(AS_USIZE),
-            page_load: page_load_value.as_u64().map(AS_USIZE).unwrap(),
-            implicit: implicit_value.as_u64().map(AS_USIZE).unwrap(),
+            script: script_value.as_u64().map(|v| v as usize),
+            page_load: page_load_value.as_u64().map(|v| v as usize).unwrap(),
+            implicit: implicit_value.as_u64().map(|v| v as usize).unwrap(),
         };
         debug!("timeouts are {:?}", timeouts);
         Ok(timeouts)
@@ -566,20 +575,14 @@ pub(crate) fn send_text_to_element(
     }
 }
 
-pub(crate) fn switch_to_frame(
-    session_id: &str,
-    element_id: &str
-) -> Result<(), WebdriverError> {
+pub(crate) fn switch_to_frame(session_id: &str, element_id: &str) -> Result<(), WebdriverError> {
     debug!(
         "switching to frame with id {} on session with id {}",
         element_id, session_id
     );
 
     let json = post(
-        &format!(
-            "http://localhost:4444/session/{}/frame",
-            session_id
-        ),
+        &format!("http://localhost:4444/session/{}/frame", session_id),
         &json!({
             "id": {
                 "element-6066-11e4-a52e-4f735466cecf": element_id
@@ -592,24 +595,22 @@ pub(crate) fn switch_to_frame(
         debug!("success");
         Ok(())
     } else {
-        error!("response to switch to frame request was not understood: {}", json);
+        error!(
+            "response to switch to frame request was not understood: {}",
+            json
+        );
         Err(WebdriverError::InvalidResponse)
     }
 }
 
-pub(crate) fn switch_to_parent_frame(
-    session_id: &str
-) -> Result<(), WebdriverError> {
+pub(crate) fn switch_to_parent_frame(session_id: &str) -> Result<(), WebdriverError> {
     debug!(
         "switching to parent frame on session with id {}",
         session_id
     );
 
     let json = post(
-        &format!(
-            "http://localhost:4444/session/{}/frame/parent",
-            session_id
-        ),
+        &format!("http://localhost:4444/session/{}/frame/parent", session_id),
         "{}",
     )?;
 
@@ -617,7 +618,10 @@ pub(crate) fn switch_to_parent_frame(
         debug!("success");
         Ok(())
     } else {
-        error!("response to switch to parent frame request was not understood: {}", json);
+        error!(
+            "response to switch to parent frame request was not understood: {}",
+            json
+        );
         Err(WebdriverError::InvalidResponse)
     }
 }
@@ -758,12 +762,12 @@ pub(crate) fn get_element_rect(
     if x.is_number() && y.is_number() && w.is_number() && h.is_number() {
         let value = (
             (
-                x.as_u64().map(AS_USIZE).unwrap(),
-                y.as_u64().map(AS_USIZE).unwrap(),
+                x.as_u64().map(|v| v as usize).unwrap(),
+                y.as_u64().map(|v| v as usize).unwrap(),
             ),
             (
-                w.as_u64().map(AS_USIZE).unwrap(),
-                h.as_u64().map(AS_USIZE).unwrap(),
+                w.as_u64().map(|v| v as usize).unwrap(),
+                h.as_u64().map(|v| v as usize).unwrap(),
             ),
         );
         debug!("rect is {:?}", value);
@@ -824,7 +828,7 @@ pub(crate) fn get_all_cookies(session_id: &str) -> Result<Vec<CookieData>, Webdr
 
             let tuple = (
                 object["domain"].as_str().unwrap().to_string(),
-                object["expiry"].as_u64().map(AS_USIZE),
+                object["expiry"].as_u64().map(|v| v as usize),
                 object["httpOnly"].as_bool(),
                 object["name"].as_str().unwrap().to_string(),
                 object["path"].as_str().unwrap().to_string(),

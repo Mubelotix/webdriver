@@ -1,11 +1,11 @@
+use serde::{Deserialize, Serialize};
 use serde_json::*;
-use serde::{Serialize, Deserialize};
 
 #[derive(Copy, Clone, Serialize, Debug, PartialEq)]
 pub struct Timeouts {
     pub script: Option<usize>,
     pub page_load: usize,
-    pub implicit: usize
+    pub implicit: usize,
 }
 
 impl Timeouts {

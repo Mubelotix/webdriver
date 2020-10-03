@@ -1,6 +1,4 @@
-#[derive(PartialEq)]
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum WebdriverError {
     UnsupportedPlatform,
     FailedRequest,
@@ -32,7 +30,7 @@ pub enum WebdriverError {
     UnknowError,
     UnknowMethod,
     UnsupportedOperation,
-    Custom(String)
+    Custom(String),
 }
 
 impl WebdriverError {

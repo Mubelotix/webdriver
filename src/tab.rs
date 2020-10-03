@@ -4,13 +4,7 @@ use std::{rc::Rc, result::Result};
 
 use serde_json::Value;
 
-use crate::{
-    elements::Element,
-    enums::*,
-    error::*,
-    http_requests::*,
-    session::*,
-};
+use crate::{elements::Element, enums::*, error::*, http_requests::*, session::*};
 
 /// Tabs are used to load a site and get informations.
 ///
@@ -83,7 +77,7 @@ impl Tab {
             Err(error) => Err(error),
         }
     }
-    
+
     /// Return the url of the current web page.
     pub fn get_url(&self) -> Result<String, WebdriverError> {
         self.select()?;

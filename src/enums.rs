@@ -1,12 +1,10 @@
-#[derive(PartialEq)]
-#[derive(Debug)]
-#[derive(Copy, Clone)]
+#[derive(Copy, PartialEq, Debug, Clone)]
 pub enum Selector {
     Css,
     XPath,
     TagName,
     LinkText,
-    PartialLinkText
+    PartialLinkText,
 }
 
 impl Into<&str> for Selector {
@@ -16,46 +14,40 @@ impl Into<&str> for Selector {
             Selector::XPath => "xpath",
             Selector::TagName => "tag name",
             Selector::LinkText => "link text",
-            Selector::PartialLinkText => "partial link text"
+            Selector::PartialLinkText => "partial link text",
         }
     }
 }
 
-#[derive(PartialEq)]
-#[derive(Debug)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Browser {
     Firefox,
-    Chrome
+    Chrome,
+}
+
+impl Into<&'static str> for &Browser {
+    fn into(self) -> &'static str {
+        match self {
+            Browser::Firefox => "firefox",
+            Browser::Chrome => "chrome",
+        }
+    }
 }
 
 impl Browser {
-    pub fn to_string(self) -> &'static str {
-        match self {
-            Browser::Firefox => "firefox",
-            Browser::Chrome => "chrome"
-        }
+    pub fn as_str(&self) -> &'static str {
+        self.into()
     }
 }
 
-#[derive(PartialEq)]
-#[derive(Debug)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Platform {
     Linux,
     Windows,
-    Unknow
+    Unknow,
 }
 
 impl Platform {
-    pub fn to_string(self) -> &'static str {
-        match self {
-            Platform::Linux => "linux",
-            Platform::Windows => "windows",
-            Platform::Unknow => "unknow"
-        }
-    }
-
     pub fn current() -> Platform {
         if cfg!(unix) {
             Platform::Linux
@@ -63,6 +55,20 @@ impl Platform {
             Platform::Windows
         } else {
             Platform::Unknow
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        self.into()
+    }
+}
+
+impl Into<&'static str> for &Platform {
+    fn into(self) -> &'static str {
+        match self {
+            Platform::Linux => "linux",
+            Platform::Windows => "windows",
+            Platform::Unknow => "unknow",
         }
     }
 }

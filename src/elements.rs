@@ -1,7 +1,6 @@
-use std::{rc::Rc, result::Result};
-
 use log::{error, warn};
 use serde_json::{json, Value};
+use std::{rc::Rc, result::Result};
 
 use crate::{
     enums::WebdriverObject,
@@ -9,7 +8,8 @@ use crate::{
     http_requests::{
         click_on_element, execute_script_sync, get_element_attribute, get_element_css_value,
         get_element_property, get_element_rect, get_element_tag_name, get_element_text,
-        get_selected_tab, is_element_enabled, select_tab, send_text_to_element, switch_to_frame, ElementRect,
+        get_selected_tab, is_element_enabled, select_tab, send_text_to_element, switch_to_frame,
+        ElementRect,
     },
 };
 
@@ -47,7 +47,7 @@ impl Element {
         send_text_to_element(&self.session_id, &self.id, text)
     }
 
-    pub fn switch_to(&mut self)  -> Result<(), WebdriverError> {
+    pub fn switch_to(&mut self) -> Result<(), WebdriverError> {
         self.select_tab()?;
         switch_to_frame(&self.session_id, &self.id)
     }
