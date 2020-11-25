@@ -1,5 +1,5 @@
-use crate::{elements::ELEMENT_ID, enums::Selector, error::*, timeouts::Timeouts};
-use log::{debug, error, warn};
+use crate::{enums::Selector, error::*, timeouts::Timeouts};
+use log::{debug, warn};
 use serde_json::{self, json, Value};
 use serde::{Serialize, de::DeserializeOwned, Deserialize};
 use std::convert::TryFrom;
@@ -26,7 +26,7 @@ fn request<B: Serialize, V: DeserializeOwned>(url: &str, method: Method<B>) -> R
             let text = result.as_str().map_err(|e| WebdriverError::HttpRequestError(e))?;
             let mut json = match serde_json::from_str::<Value>(text) {
                 Ok(json) => json,
-                Err(e) => {
+                Err(_e) => {
                     todo!()
                 }
             };
@@ -37,7 +37,7 @@ fn request<B: Serialize, V: DeserializeOwned>(url: &str, method: Method<B>) -> R
                 Ok(value) => {
                     Ok(value)
                 }
-                Err(err) => {
+                Err(_err) => {
                     if let Ok(e) = serde_json::from_str::<Value>(text) {
                         if let Some(e) = e["value"]["error"].as_str() {
                             if let Ok(error) = BrowserError::try_from(e) {

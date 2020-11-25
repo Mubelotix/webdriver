@@ -65,8 +65,8 @@ impl Tab {
     /// Find an element in the tab, selected by a [Selector](../enums/enum.Selector.html).
     pub fn find(
         &mut self,
-        selector: Selector,
-        tofind: &str,
+        _selector: Selector,
+        _tofind: &str,
     ) -> Result<Option<Element>, WebdriverError> {
         self.select()?;
         unimplemented!()
