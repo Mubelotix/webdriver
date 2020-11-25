@@ -1,6 +1,6 @@
 //! Tabs allow you to control elements
 
-use std::{rc::Rc, result::Result};
+use std::{rc::Rc, result::Result, unimplemented};
 
 use serde_json::Value;
 
@@ -69,7 +69,8 @@ impl Tab {
         tofind: &str,
     ) -> Result<Option<Element>, WebdriverError> {
         self.select()?;
-        match find_element(&self.session_id, &selector, &tofind) {
+        unimplemented!()
+        /*match find_element(&self.session_id, &selector, &tofind) {
             Ok(id) => Ok(Some(Element::new(
                 id,
                 Rc::clone(&self.session_id),
@@ -77,7 +78,7 @@ impl Tab {
             ))),
             Err(WebdriverError::NoSuchElement) => Ok(None),
             Err(error) => Err(error),
-        }
+        }*/
     }
 
     /// Return the url of the current web page.
@@ -120,14 +121,14 @@ impl Tab {
         switch_to_parent_frame(&self.session_id)
     }
 
-    pub fn get_cookies(&self) -> Result<Vec<CookieData>, WebdriverError> {
+    pub fn get_cookies(&self) -> Result<Vec<Cookie>, WebdriverError> {
         self.select()?;
         get_all_cookies(&self.session_id)
     }
 
     pub fn set_cookie(
         &self,
-        cookie: (String, usize, bool, String, String, bool, String),
+        cookie: Cookie,
     ) -> Result<(), WebdriverError> {
         self.select()?;
         set_cookie(&self.session_id, cookie)
@@ -135,7 +136,7 @@ impl Tab {
 
     pub fn set_cookies(
         &self,
-        cookies: Vec<(String, usize, bool, String, String, bool, String)>,
+        cookies: Vec<Cookie>,
     ) -> Result<(), WebdriverError> {
         self.select()?;
         for cookie in cookies {
@@ -146,7 +147,7 @@ impl Tab {
 
     pub fn get_page_source(&self) -> Result<String, WebdriverError> {
         self.select()?;
-        get_page_source(&self.session_id)
+        unimplemented!()
     }
 }
 

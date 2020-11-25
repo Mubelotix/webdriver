@@ -53,7 +53,7 @@ impl Session {
         info! {"Creating a session..."};
         let result = Session::new_session(browser, headless);
 
-        if let Err(WebdriverError::FailedRequest) = result {
+        if let Err(WebdriverError::HttpRequestError(_e)) = result {
             warn! {"No webdriver launched."}
             if cfg!(unix) {
                 if browser == Browser::Firefox {
@@ -72,6 +72,8 @@ impl Session {
                     } else if let Err(e) = result {
                         error!("Failed to create session. error : {:?}.", e);
                         return Err(e);
+                    } else {
+                        unreachable!();
                     }
                 } else {
                     info! {"Launching chromedriver..."}
@@ -90,16 +92,16 @@ impl Session {
                     } else if let Err(e) = result {
                         error!("Failed to create session. error : {:?}.", e);
                         return Err(e);
+                    } else {
+                        unreachable!();
                     }
                 }
             } else {
                 panic!("Please launch the webdriver manually.")
             }
         } else {
-            return result;
+            result
         }
-
-        result
     }
 
     fn new_session(browser: Browser, headless: bool) -> Result<Self, WebdriverError> {
@@ -162,7 +164,7 @@ impl Session {
         };
 
         // Send request
-        let session_id = new_session(&post_data.to_string())?;
+        let session_id = new_session(post_data)?.sessionId;
         let mut session = Session {
             id: Rc::new(session_id),
             webdriver_process: None,
@@ -187,7 +189,7 @@ impl Session {
     /// assert_eq!(session.tabs.len(), 2); // new tab is accessible
     /// ```
     pub fn open_tab(&mut self) -> Result<Tab, WebdriverError> {
-        let tab_id = new_tab(&self.id)?;
+        let tab_id = new_tab(&self.id)?.handle;
 
         Ok(Tab::new_from(tab_id, Rc::clone(&self.id), true))
     }

@@ -1,11 +1,15 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_json::*;
 
-#[derive(Copy, Clone, Serialize, Debug, PartialEq)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct Timeouts {
+    #[serde(default)]
     pub script: Option<usize>,
-    pub page_load: usize,
-    pub implicit: usize,
+    #[serde(default)]
+    #[serde(rename = "pageLoad")]
+    pub page_load: Option<usize>,
+    #[serde(default)]
+    pub implicit: Option<usize>,
 }
 
 impl Timeouts {

@@ -90,8 +90,8 @@ impl Element {
         }
 
         match click_on_element(&self.session_id, &self.id) {
-            Err(WebdriverError::ElementNotInteractable)
-            | Err(WebdriverError::ElementClickIntercepted) => Ok(()),
+            Err(WebdriverError::BrowserError(BrowserError::ElementNotInteractable))
+            | Err(WebdriverError::BrowserError(BrowserError::ElementClickIntercepted)) => Ok(()),
             whatever => whatever,
         }
     }

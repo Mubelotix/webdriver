@@ -1,330 +1,176 @@
-use crate::{elements::ELEMENT_ID, enums::Selector, error::WebdriverError, timeouts::Timeouts};
+use crate::{elements::ELEMENT_ID, enums::Selector, error::*, timeouts::Timeouts};
 use log::{debug, error, warn};
 use serde_json::{self, json, Value};
+use serde::{Serialize, de::DeserializeOwned, Deserialize};
+use std::convert::TryFrom;
 
 type MinReqResult = Result<minreq::Response, minreq::Error>;
 
-fn handle_response(result: MinReqResult) -> Result<Value, WebdriverError> {
-    if let Ok(result) = result {
-        if let Ok(text) = result.as_str() {
-            match serde_json::from_str::<Value>(text) {
-                Ok(json) => {
-                    let error_value = &json["value"]["error"];
-
-                    if error_value.is_string() {
-                        let webdriver_error = WebdriverError::from(error_value.to_string());
-                        error!("{:?}, response: {}", webdriver_error, json);
-                        Err(webdriver_error)
-                    } else {
-                        Ok(json)
-                    }
-                }
-                Err(err) => {
-                    error!(
-                        "WebdriverError::InvalidResponse (not json), text: {:?}, error: {:?}",
-                        text, err,
-                    );
-                    Err(WebdriverError::InvalidResponse)
-                }
-            }
-        } else {
-            error!(
-                "WebdriverError::InvalidResponse (not utf8), error: {:?}",
-                result.as_str()
-            );
-            Err(WebdriverError::InvalidResponse)
-        }
-    } else {
-        error!("WebdriverError::FailedRequest, error: {:?}", result);
-        Err(WebdriverError::FailedRequest)
-    }
+pub enum Method<B: Serialize> {
+    Get,
+    Delete,
+    Post(B),
 }
 
 /// used by requests sending data
 #[inline]
-fn post(url: &str, body: &str) -> Result<Value, WebdriverError> {
-    handle_response(minreq::post(url).with_body(body.to_owned()).send())
+fn request<B: Serialize, V: DeserializeOwned>(url: &str, method: Method<B>) -> Result<V, WebdriverError> {
+    let result = match method {
+        Method::Get => minreq::get(url),
+        Method::Post(body) => minreq::post(url).with_body(serde_json::to_string(&body).unwrap()),
+        Method::Delete => minreq::delete(url),
+    }.send();
+
+    match result {
+        Ok(result) => {
+            let text = result.as_str().map_err(|e| WebdriverError::HttpRequestError(e))?;
+            let mut json = match serde_json::from_str::<Value>(text) {
+                Ok(json) => json,
+                Err(e) => {
+                    todo!()
+                }
+            };
+
+            let value = json["value"].take();
+
+            match serde_json::from_value::<V>(value) {
+                Ok(value) => {
+                    Ok(value)
+                }
+                Err(err) => {
+                    if let Ok(e) = serde_json::from_str::<Value>(text) {
+                        if let Some(e) = e["value"]["error"].as_str() {
+                            if let Ok(error) = BrowserError::try_from(e) {
+                                return Err(WebdriverError::BrowserError(error))
+                            }
+                        }
+                    }
+                    Err(WebdriverError::InvalidBrowserResponse)
+                }
+            }
+        },
+        Err(e) => Err(WebdriverError::HttpRequestError(e))
+    }
 }
 
-/// use by requests getting data
-#[inline]
-fn get(url: &str) -> Result<Value, WebdriverError> {
-    handle_response(minreq::get(url).send())
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NewSessionResponse {
+    pub sessionId: String,
+    pub capabilities: Value,
 }
 
-/// use by requests using delete http requests
-#[inline]
-fn delete(url: &str) -> Result<Value, WebdriverError> {
-    handle_response(minreq::delete(url).send())
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NewWindowResponse {
+    pub handle: String,
+    #[serde(rename = "type")]
+    pub window_type: Value,
 }
 
-#[test]
-fn test() {
-    println!(
-        "{:?}",
-        post(
-            "http://localhost:4444/session/b1191cdf-b297-4fb3-b073-f1dc28e9adde/window/new",
-            "{}"
-        )
-    );
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ElementRect {
+    pub x: usize,
+    pub y: usize,
+    pub width: usize,
+    pub height: usize,
 }
 
-/// -> take capabilities (options)
-/// create a session
-/// -> return created session id
-pub(crate) fn new_session(capabilities: &str) -> Result<String, WebdriverError> {
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Cookie {
+    pub name: String,
+    pub value: String,
+    pub path: Option<String>,
+    pub domain: Option<String>,
+    pub secure: Option<bool>,
+    pub http_only: Option<bool>,
+    pub expiry: Option<u64>,
+    pub same_site: Option<String>
+}
+
+pub(crate) fn new_session(capabilities: Value) -> Result<NewSessionResponse, WebdriverError> {
     debug!(
         "session creation request with capabilities {}",
         capabilities
     );
 
-    let json = post("http://localhost:4444/session", capabilities)?;
-    let session_id_value = &json["value"]["sessionId"];
-
-    if session_id_value.is_string() {
-        let session_id = session_id_value.as_str().unwrap().to_string();
-        debug!("session created (id: {:?})", session_id);
-        Ok(session_id)
-    } else {
-        error!(
-            "response to session creation request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    request("http://localhost:4444/session", Method::Post(capabilities))
 }
 
-/// -> take session id
-/// create a tab on this session
-/// -> return created tab id
-pub(crate) fn new_tab(session_id: &str) -> Result<String, WebdriverError> {
+pub(crate) fn new_tab(session_id: &str) -> Result<NewWindowResponse, WebdriverError> {
     debug!("tab creation request on session with id {}", session_id);
 
-    debug!(
-        "url {:?}",
-        format!("http://localhost:4444/session/{}/window/new", session_id)
-    );
-    let json = post(
+    request(
         &format!("http://localhost:4444/session/{}/window/new", session_id),
-        "{}\n",
-    )?;
-
-    let handle_value = &json["value"]["handle"];
-
-    if handle_value.is_string() {
-        let session_id = handle_value.as_str().unwrap().to_string();
-        debug!("tab created (id: {})", session_id);
-        Ok(session_id)
-    } else {
-        error!(
-            "response to session creation request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+        Method::Post(()),
+    )
 }
 
-/// -> take session id
-/// -> return every open tab ids
 pub(crate) fn get_open_tabs(session_id: &str) -> Result<Vec<String>, WebdriverError> {
     debug!("getting ids of open tabs on session with id {}", session_id);
 
-    debug!(
-        "url {:?}",
-        format!(
-            "http://localhost:4444/session/{}/window/handles",
-            session_id
-        )
-    );
-    let json = get(&format!(
-        "http://localhost:4444/session/{}/window/handles",
-        session_id
-    ))?;
-
-    let value = &json["value"];
-
-    if value.is_array() {
-        let values = value.as_array().unwrap();
-        let mut tabs = Vec::with_capacity(values.len());
-
-        for string_value in values.iter() {
-            tabs.push(string_value.as_str().unwrap().to_owned());
-        }
-
-        debug!("ids of open tabs: {:?}", tabs);
-        Ok(tabs)
-    } else {
-        error!(
-            "response to open tab ids request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    request::<(), Vec<String>>(
+        &format!("http://localhost:4444/session/{}/window/handles",session_id),
+        Method::Get,
+    )
 }
 
-/// -> take session id
-/// -> return selected tab id
 pub(crate) fn get_selected_tab(session_id: &str) -> Result<String, WebdriverError> {
     debug!(
         "getting id of the selected tab on session with id {}",
         session_id
     );
 
-    let json = get(&format!(
-        "http://localhost:4444/session/{}/window",
-        session_id
-    ))?;
-
-    let value = &json["value"];
-
-    if value.is_string() {
-        let id = value.as_str().unwrap().to_string();
-        debug!("the selected tab id is {}", id);
-        Ok(id)
-    } else {
-        error!(
-            "response to selected tab id request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    request::<(), String>(&format!("http://localhost:4444/session/{}/window",session_id), Method::Get)
 }
 
-/// -> take session id
-/// -> return timeouts
 pub(crate) fn get_timeouts(session_id: &str) -> Result<Timeouts, WebdriverError> {
     debug!("getting timeouts on session with id {}", session_id);
 
-    let json = get(&format!(
+    request::<(), Timeouts>(&format!(
         "http://localhost:4444/session/{}/timeouts",
         session_id
-    ))?;
-
-    let value = &json["value"];
-    let page_load_value = &value["pageLoad"];
-    let implicit_value = &value["implicit"];
-
-    if page_load_value.is_number() && implicit_value.is_number() {
-        let script_value = &value["script"];
-
-        let timeouts = Timeouts {
-            script: script_value.as_u64().map(|v| v as usize),
-            page_load: page_load_value.as_u64().map(|v| v as usize).unwrap(),
-            implicit: implicit_value.as_u64().map(|v| v as usize).unwrap(),
-        };
-        debug!("timeouts are {:?}", timeouts);
-        Ok(timeouts)
-    } else {
-        error!("response to timeouts request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    ), Method::Get)
 }
 
-/// -> take session id and timeouts
-/// set timeouts
 pub(crate) fn set_timeouts(session_id: &str, timeouts: Timeouts) -> Result<(), WebdriverError> {
     debug!(
         "setting timeouts to {:?} on session with id {}",
         timeouts, session_id
     );
 
-    let json = post(
-        &format!("http://localhost:4444/session/{}/timeouts", session_id),
-        &serde_json::to_string(&timeouts).unwrap(),
-    )?;
-
-    if json["value"].is_null() {
-        debug!("setting timeouts succeed");
-        Ok(())
-    } else {
-        error!(
-            "response to timeouts change request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    request(&format!("http://localhost:4444/session/{}/timeouts", session_id), Method::Post(timeouts))
 }
 
-/// -> take session id and tab id
-/// select tab
 pub(crate) fn select_tab(session_id: &str, tab_id: &str) -> Result<(), WebdriverError> {
     debug!(
         "selecting tab with id {} on session with id {}",
         tab_id, session_id
     );
 
-    let json = post(
-        &format!("http://localhost:4444/session/{}/window", session_id),
-        &json!({
-            "handle": tab_id,
-        })
-        .to_string(),
-    )?;
-
-    if json["value"].is_null() {
-        debug!("selecting tab succeed");
-        Ok(())
-    } else {
-        error!(
-            "response to tab selection request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    request(&format!("http://localhost:4444/session/{}/window", session_id), Method::Post(json! ({
+        "handle": tab_id
+    })))
 }
 
-/// -> take session id and a valid url
-/// load a website in the selected tab
 pub(crate) fn navigate(session_id: &str, url: &str) -> Result<(), WebdriverError> {
     debug!("navigating to {} on session with id {}", url, session_id);
 
-    let json = post(
-        &format!("http://localhost:4444/session/{}/url", session_id),
-        &json!({
-            "url": url,
-        })
-        .to_string(),
-    )?;
-
-    if json["value"].is_null() {
-        debug!("navigation succeed");
-        Ok(())
-    } else {
-        error!(
-            "response to navigation request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    request(&format!("http://localhost:4444/session/{}/url", session_id), Method::Post(json! ({
+        "url": url
+    })))
 }
 
-/// -> take session id
-/// close active tab
-pub(crate) fn close_active_tab(session_id: &str) -> Result<(), WebdriverError> {
+pub(crate) fn close_active_tab(session_id: &str) -> Result<Vec<String>, WebdriverError> {
     debug!("closing active tab on session with id {}", session_id);
 
-    let json = delete(&format!(
-        "http://localhost:4444/session/{}/window",
-        session_id
-    ))?;
-
-    if json["value"].is_array() || json["value"].is_null() {
-        debug!("tab closed successfully");
-        Ok(())
-    } else {
-        error!("response to close request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    request::<(), Vec<String>>(&format!("http://localhost:4444/session/{}/window", session_id), Method::Delete)
 }
 
-/// -> take session id, a selector and a value
-/// search for elements
-/// -> return id of the first element found
-pub(crate) fn find_element(
+pub(crate) fn find_elements(
     session_id: &str,
     selector: &Selector,
     value: &str,
-) -> Result<String, WebdriverError> {
+) -> Result<Vec<String>, WebdriverError> {
     let selector: &str = selector.into();
 
     debug!(
@@ -332,143 +178,57 @@ pub(crate) fn find_element(
         selector, value, session_id
     );
 
-    let json = post(
-        &format!("http://localhost:4444/session/{}/element", session_id),
-        &json!({
-            "using": selector,
-            "value": value,
-        })
-        .to_string(),
-    )?;
-
-    let element_value = &json["value"][ELEMENT_ID];
-
-    if element_value.is_string() {
-        debug!("element found");
-        Ok(element_value.as_str().unwrap().to_string())
-    } else {
-        error!(
-            "response to element search request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    request(&format!("http://localhost:4444/session/{}/element", session_id), Method::Post(json!({
+        "using": selector,
+        "value": value,
+    })))
 }
 
-/// -> take session id
-/// -> return url of the active tab
 pub(crate) fn get_active_tab_url(session_id: &str) -> Result<String, WebdriverError> {
     debug!(
         "getting url of active tab on session with id {}",
         session_id
     );
 
-    let json = get(&format!("http://localhost:4444/session/{}/url", session_id))?;
-    let value = &json["value"];
-
-    if value.is_string() {
-        let url = value.as_str().unwrap().to_string();
-        debug!("active tab url is {}", url);
-        Ok(url)
-    } else {
-        error!("response to url request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    request::<(), String>(&format!("http://localhost:4444/session/{}/url", session_id), Method::Get)
 }
 
-/// -> take session id
-/// -> return title of the active tab
 pub(crate) fn get_active_tab_title(session_id: &str) -> Result<String, WebdriverError> {
     debug!(
         "getting title of active tab on session with id {}",
         session_id
     );
 
-    let json = get(&format!(
-        "http://localhost:4444/session/{}/title",
-        session_id
-    ))?;
-
-    let value = &json["value"];
-
-    if value.is_string() {
-        let url = value.as_str().unwrap().to_string();
-        debug!("active tab title is {}", url);
-        Ok(url)
-    } else {
-        error!("response to title request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    request::<(), String>(&format!("http://localhost:4444/session/{}/title", session_id), Method::Get)
 }
 
-/// -> take session id
-/// navigate backward on the selected tab
 pub(crate) fn back(session_id: &str) -> Result<(), WebdriverError> {
     debug!(
         "navigating backward on active tab on session with id {}",
         session_id
     );
 
-    let json = post(
-        &format!("http://localhost:4444/session/{}/back", session_id),
-        "{}",
-    )?;
-
-    if json["value"].is_null() {
-        debug!("successfully navigated backward");
-        Ok(())
-    } else {
-        error!("response to back request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    request::<(), ()>(&format!("http://localhost:4444/session/{}/back", session_id), Method::Post(()))
 }
 
-/// -> take session id
-/// navigate forward on the selected tab
 pub(crate) fn forward(session_id: &str) -> Result<(), WebdriverError> {
     debug!(
         "navigating forward on active tab on session with id {}",
         session_id
     );
 
-    let json = post(
-        &format!("http://localhost:4444/session/{}/forward", session_id),
-        "{}",
-    )?;
-
-    if json["value"].is_null() {
-        debug!("successfully navigated forward");
-        Ok(())
-    } else {
-        error!("response to forward request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    request::<(), ()>(&format!("http://localhost:4444/session/{}/forward", session_id), Method::Post(()))
 }
 
-/// -> take session id
-/// refresh the selected tab
 pub(crate) fn refresh(session_id: &str) -> Result<(), WebdriverError> {
     debug!(
         "refreshing the active tab on session with id {}",
         session_id
     );
 
-    let json = post(
-        &format!("http://localhost:4444/session/{}/refresh", session_id),
-        "{}",
-    )?;
-
-    if json["value"].is_null() {
-        debug!("tab successfully refreshed");
-        Ok(())
-    } else {
-        error!("response to refresh request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    request::<(), ()>(&format!("http://localhost:4444/session/{}/refresh", session_id), Method::Post(()))
 }
 
-/// -> take session id, script and args
-/// execute the script on the active tab
 pub(crate) fn execute_script_sync(
     session_id: &str,
     script: &str,
@@ -479,22 +239,10 @@ pub(crate) fn execute_script_sync(
         session_id
     );
 
-    let json = post(
-        &format!("http://localhost:4444/session/{}/execute/sync", session_id),
-        &json!({
-            "script": script,
-            "args": args,
-        })
-        .to_string(),
-    )?;
-
-    if json["value"].is_null() {
-        debug!("script successfully executed");
-        Ok(())
-    } else {
-        error!("response to refresh request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    request::<Value, ()>(&format!("http://localhost:4444/session/{}/execute/sync", session_id), Method::Post(json!({
+        "script": script,
+        "args": args,
+    })))
 }
 
 pub(crate) fn click_on_element(session_id: &str, element_id: &str) -> Result<(), WebdriverError> {
@@ -504,21 +252,10 @@ pub(crate) fn click_on_element(session_id: &str, element_id: &str) -> Result<(),
     );
     warn!("click_on_element function may fail silently in firefox");
 
-    let json = post(
-        &format!(
-            "http://localhost:4444/session/{}/element/{}/click",
-            session_id, element_id
-        ),
-        "{}",
-    )?;
-
-    if json["value"].is_null() {
-        debug!("clicked successfully");
-        Ok(())
-    } else {
-        error!("response to click request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    request::<(), ()>(&format!(
+        "http://localhost:4444/session/{}/element/{}/click",
+        session_id, element_id
+    ), Method::Post(()))
 }
 
 pub(crate) fn get_element_text(
@@ -530,19 +267,10 @@ pub(crate) fn get_element_text(
         session_id, element_id
     );
 
-    let json = get(&format!(
+    request::<(), String>(&format!(
         "http://localhost:4444/session/{}/element/{}/text",
         session_id, element_id
-    ))?;
-
-    if json["value"].is_string() {
-        let text = json["value"].as_str().unwrap().to_string();
-        debug!("text of element with id {} is {}", element_id, text);
-        Ok(text)
-    } else {
-        error!("response to text request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    ), Method::Get)
 }
 
 pub(crate) fn send_text_to_element(
@@ -555,24 +283,12 @@ pub(crate) fn send_text_to_element(
         text, session_id, element_id
     );
 
-    let json = post(
-        &format!(
-            "http://localhost:4444/session/{}/element/{}/value",
-            session_id, element_id
-        ),
-        &json!({
-            "text": text,
-        })
-        .to_string(),
-    )?;
-
-    if json["value"].is_null() {
-        debug!("success");
-        Ok(())
-    } else {
-        error!("response to send text request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    request(&format!(
+        "http://localhost:4444/session/{}/element/{}/value",
+        session_id, element_id
+    ), Method::Post(json!({
+        "text": text,
+    })))
 }
 
 pub(crate) fn switch_to_frame(session_id: &str, element_id: &str) -> Result<(), WebdriverError> {
@@ -581,26 +297,11 @@ pub(crate) fn switch_to_frame(session_id: &str, element_id: &str) -> Result<(), 
         element_id, session_id
     );
 
-    let json = post(
-        &format!("http://localhost:4444/session/{}/frame", session_id),
-        &json!({
-            "id": {
-                "element-6066-11e4-a52e-4f735466cecf": element_id
-            },
-        })
-        .to_string(),
-    )?;
-
-    if json["value"].is_null() {
-        debug!("success");
-        Ok(())
-    } else {
-        error!(
-            "response to switch to frame request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    request(&format!("http://localhost:4444/session/{}/frame", session_id), Method::Post(json!({
+        "id": {
+            "element-6066-11e4-a52e-4f735466cecf": element_id
+        },
+    })))
 }
 
 pub(crate) fn switch_to_parent_frame(session_id: &str) -> Result<(), WebdriverError> {
@@ -609,21 +310,7 @@ pub(crate) fn switch_to_parent_frame(session_id: &str) -> Result<(), WebdriverEr
         session_id
     );
 
-    let json = post(
-        &format!("http://localhost:4444/session/{}/frame/parent", session_id),
-        "{}",
-    )?;
-
-    if json["value"].is_null() {
-        debug!("success");
-        Ok(())
-    } else {
-        error!(
-            "response to switch to parent frame request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    request(&format!("http://localhost:4444/session/{}/frame/parent", session_id), Method::Post(()))
 }
 
 pub(crate) fn get_element_attribute(
@@ -636,22 +323,10 @@ pub(crate) fn get_element_attribute(
         attribute_name, session_id, element_id
     );
 
-    let json = get(&format!(
+    request::<(), String>(&format!(
         "http://localhost:4444/session/{}/element/{}/attribute/{}",
         session_id, element_id, attribute_name
-    ))?;
-
-    if json["value"].is_string() {
-        let value = json["value"].as_str().unwrap().to_string();
-        debug!("attribute {} is {}", attribute_name, value);
-        Ok(value)
-    } else {
-        error!(
-            "response to get element attribute request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    ), Method::Get)
 }
 
 pub(crate) fn get_element_property(
@@ -664,22 +339,10 @@ pub(crate) fn get_element_property(
         property_name, session_id, element_id
     );
 
-    let json = get(&format!(
+    request::<(), String>(&format!(
         "http://localhost:4444/session/{}/element/{}/property/{}",
         session_id, element_id, property_name
-    ))?;
-
-    if !json["value"].is_null() {
-        let value = json["value"].as_str().unwrap().to_string();
-        debug!("property {} is {}", property_name, value);
-        Ok(value)
-    } else {
-        error!(
-            "response to get element property request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    ), Method::Get)
 }
 
 pub(crate) fn get_element_css_value(
@@ -692,22 +355,10 @@ pub(crate) fn get_element_css_value(
         property_name, session_id, element_id
     );
 
-    let json = get(&format!(
+    request::<(), String>(&format!(
         "http://localhost:4444/session/{}/element/{}/css/{}",
         session_id, element_id, property_name
-    ))?;
-
-    if json["value"].is_string() {
-        let value = json["value"].as_str().unwrap().to_string();
-        debug!("css value for {} is {}", property_name, value);
-        Ok(value)
-    } else {
-        error!(
-            "response to get element css value request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    ), Method::Get)
 }
 
 pub(crate) fn get_element_tag_name(
@@ -719,25 +370,11 @@ pub(crate) fn get_element_tag_name(
         session_id, element_id
     );
 
-    let json = get(&format!(
+    request::<(), String>(&format!(
         "http://localhost:4444/session/{}/element/{}/name",
         session_id, element_id
-    ))?;
-
-    if json["value"].is_string() {
-        let value = json["value"].as_str().unwrap().to_string();
-        debug!("tag name is {}", value);
-        Ok(value)
-    } else {
-        error!(
-            "response to get element tag name request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    ), Method::Get)
 }
-
-pub type ElementRect = ((usize, usize), (usize, usize));
 
 pub(crate) fn get_element_rect(
     session_id: &str,
@@ -748,37 +385,10 @@ pub(crate) fn get_element_rect(
         session_id, element_id
     );
 
-    let json = get(&format!(
+    request::<(), ElementRect>(&format!(
         "http://localhost:4444/session/{}/element/{}/rect",
         session_id, element_id
-    ))?;
-
-    let value = &json["value"];
-    let x = &value["x"];
-    let y = &value["y"];
-    let w = &value["width"];
-    let h = &value["height"];
-
-    if x.is_number() && y.is_number() && w.is_number() && h.is_number() {
-        let value = (
-            (
-                x.as_u64().map(|v| v as usize).unwrap(),
-                y.as_u64().map(|v| v as usize).unwrap(),
-            ),
-            (
-                w.as_u64().map(|v| v as usize).unwrap(),
-                h.as_u64().map(|v| v as usize).unwrap(),
-            ),
-        );
-        debug!("rect is {:?}", value);
-        Ok(value)
-    } else {
-        error!(
-            "response to get element rect request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    ), Method::Get)
 }
 
 pub(crate) fn is_element_enabled(
@@ -790,125 +400,31 @@ pub(crate) fn is_element_enabled(
         element_id, session_id
     );
 
-    let json = get(&format!(
+    request::<(), bool>(&format!(
         "http://localhost:4444/session/{}/element/{}/enabled",
         session_id, element_id
-    ))?;
-
-    if json["value"].is_boolean() {
-        let value = json["value"].as_bool().unwrap();
-        Ok(value)
-    } else {
-        error!(
-            "response to is element enabled request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    ), Method::Get)
 }
 
-pub type CookieData = (String, usize, bool, String, String, bool, String);
-
-pub(crate) fn get_all_cookies(session_id: &str) -> Result<Vec<CookieData>, WebdriverError> {
+pub(crate) fn get_all_cookies(session_id: &str) -> Result<Vec<Cookie>, WebdriverError> {
     debug!("getting cookies on session with id {}", session_id);
 
-    let json = get(&format!(
+    request::<(), Vec<Cookie>>(&format!(
         "http://localhost:4444/session/{}/cookie",
         session_id
-    ))?;
-
-    let value = &json["value"];
-
-    if value.is_array() {
-        let values = value.as_array().unwrap();
-        let mut cookies = Vec::with_capacity(values.len());
-
-        for value in values.iter() {
-            let object = value.as_object().unwrap();
-
-            let tuple = (
-                object["domain"].as_str().unwrap().to_string(),
-                object["expiry"].as_u64().map(|v| v as usize),
-                object["httpOnly"].as_bool(),
-                object["name"].as_str().unwrap().to_string(),
-                object["path"].as_str().unwrap().to_string(),
-                object["secure"].as_bool(),
-                object["value"].as_str().unwrap().to_string(),
-            );
-
-            if let (domain, Some(expiry), Some(http_only), name, path, Some(secure), value) = tuple
-            {
-                cookies.push((domain, expiry, http_only, name, path, secure, value))
-            } else {
-                warn!("a cookie was invalid; result: {:?}", tuple)
-            }
-        }
-
-        debug!("cookies: {:?}", cookies);
-
-        Ok(cookies)
-    } else {
-        error!("response to cookies request was not understood: {}", json);
-        Err(WebdriverError::InvalidResponse)
-    }
+    ), Method::Get)
 }
 
-pub(crate) fn set_cookie(session_id: &str, cookie: CookieData) -> Result<(), WebdriverError> {
+pub(crate) fn set_cookie(session_id: &str, cookie: Cookie) -> Result<(), WebdriverError> {
     debug!(
-        "setting cookie {} to {} on session with id {}",
-        cookie.3, cookie.6, session_id
+        "setting cookie {:?} on session with id {}",
+        cookie, session_id
     );
-
-    let json = post(
-        &format!("http://localhost:4444/session/{}/cookie", session_id),
-        &json!({
-            "cookie": {
-                "domain": cookie.0,
-                "expiry": cookie.1,
-                "httpOnly": cookie.2,
-                "name": cookie.3,
-                "path": cookie.4,
-                "secure": cookie.5,
-                "value": cookie.6,
-            },
-        })
-        .to_string(),
-    )?;
-
-    if json["value"].is_null() {
-        debug!("success");
-        Ok(())
-    } else {
-        error!(
-            "response to add cookie request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
-}
-
-pub(crate) fn get_page_source(session_id: &str) -> Result<String, WebdriverError> {
-    debug!(
-        "getting page source of active tab on session with id {}",
+    
+    request::<serde_json::Value, ()>(&format!(
+        "http://localhost:4444/session/{}/cookie",
         session_id
-    );
-
-    let json = get(&format!(
-        "http://localhost:4444/session/{}/source",
-        session_id
-    ))?;
-
-    let value = &json["value"];
-
-    if value.is_string() {
-        let source = value.as_str().unwrap().to_string();
-        debug!("page source is {}", source);
-        Ok(source)
-    } else {
-        error!(
-            "response to page source request was not understood: {}",
-            json
-        );
-        Err(WebdriverError::InvalidResponse)
-    }
+    ), Method::Post(json!({
+        "cookie": cookie,
+    })))
 }

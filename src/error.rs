@@ -1,9 +1,17 @@
-#[derive(PartialEq, Debug, Clone)]
+use std::convert::TryFrom;
+
+#[derive(Debug)]
 pub enum WebdriverError {
     UnsupportedPlatform,
-    FailedRequest,
-    InvalidResponse,
-    Unknow,
+    BrowserError(BrowserError),
+    InvalidBrowserError,
+    InvalidBrowserResponse,
+    HttpRequestError(minreq::Error),
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum BrowserError {
+    Unknown,
     ElementClickIntercepted,
     ElementNotInteractable,
     InsecureCertificate,
@@ -29,40 +37,41 @@ pub enum WebdriverError {
     UnknowCommand,
     UnknowError,
     UnknowMethod,
-    UnsupportedOperation,
-    Custom(String),
+    UnsupportedOperation
 }
 
-impl WebdriverError {
-    pub fn from(error: String) -> Self {
-        match error.as_str() {
-            "element click intercepted" => WebdriverError::ElementClickIntercepted,
-            "element not interactable" => WebdriverError::ElementNotInteractable,
-            "insecure certificate" => WebdriverError::InsecureCertificate,
-            "invalid argument" => WebdriverError::InvalidArgument,
-            "invalid cookie domain" => WebdriverError::InvalidCookieDomain,
-            "invalid element state" => WebdriverError::InvalidElementState,
-            "invalid selector" => WebdriverError::InvalidSelector,
-            "invalid session id " => WebdriverError::InvalidSessionId,
-            "javascript error" => WebdriverError::JavascriptError,
-            "move target out of bounds" => WebdriverError::MoveTargetOutOfBounds,
-            "no such alert" => WebdriverError::NoSuchAlert,
-            "no such cookie" => WebdriverError::NoSuchCookie,
-            "no such element" => WebdriverError::NoSuchElement,
-            "no such frame" => WebdriverError::NoSuchFrame,
-            "no such window" => WebdriverError::NoSuchWindow,
-            "script timeout error" => WebdriverError::ScriptTimeoutError,
-            "session not created" => WebdriverError::SessionNotCreated,
-            "stale element reference" => WebdriverError::StaleElementReference,
-            "timeout" => WebdriverError::Timeout,
-            "unable to set cookie" => WebdriverError::UnnableToSetCookie,
-            "unable to capture screen" => WebdriverError::UnableToCaptureScreen,
-            "unexpected alert open" => WebdriverError::UnexpectedAlertOpen,
-            "unknown command" => WebdriverError::UnknowCommand,
-            "unknown error" => WebdriverError::Unknow,
-            "unknown method" => WebdriverError::UnknowMethod,
-            "unsupported operation" => WebdriverError::UnsupportedOperation,
-            _ => WebdriverError::Custom(error),
+impl TryFrom<&str> for BrowserError {
+    type Error = WebdriverError;
+
+    fn try_from(error: &str) -> Result<Self, WebdriverError> {
+        match error {
+            "element click intercepted" => Ok(BrowserError::ElementClickIntercepted),
+            "element not interactable" => Ok(BrowserError::ElementNotInteractable),
+            "insecure certificate" => Ok(BrowserError::InsecureCertificate),
+            "invalid argument" => Ok(BrowserError::InvalidArgument),
+            "invalid cookie domain" => Ok(BrowserError::InvalidCookieDomain),
+            "invalid element state" => Ok(BrowserError::InvalidElementState),
+            "invalid selector" => Ok(BrowserError::InvalidSelector),
+            "invalid session id " => Ok(BrowserError::InvalidSessionId),
+            "javascript error" => Ok(BrowserError::JavascriptError),
+            "move target out of bounds" => Ok(BrowserError::MoveTargetOutOfBounds),
+            "no such alert" => Ok(BrowserError::NoSuchAlert),
+            "no such cookie" => Ok(BrowserError::NoSuchCookie),
+            "no such element" => Ok(BrowserError::NoSuchElement),
+            "no such frame" => Ok(BrowserError::NoSuchFrame),
+            "no such window" => Ok(BrowserError::NoSuchWindow),
+            "script timeout error" => Ok(BrowserError::ScriptTimeoutError),
+            "session not created" => Ok(BrowserError::SessionNotCreated),
+            "stale element reference" => Ok(BrowserError::StaleElementReference),
+            "timeout" => Ok(BrowserError::Timeout),
+            "unable to set cookie" => Ok(BrowserError::UnnableToSetCookie),
+            "unable to capture screen" => Ok(BrowserError::UnableToCaptureScreen),
+            "unexpected alert open" => Ok(BrowserError::UnexpectedAlertOpen),
+            "unknown command" => Ok(BrowserError::UnknowCommand),
+            "unknown error" => Ok(BrowserError::Unknown),
+            "unknown method" => Ok(BrowserError::UnknowMethod),
+            "unsupported operation" => Ok(BrowserError::UnsupportedOperation),
+            _ => Err(WebdriverError::InvalidBrowserError),
         }
     }
 }
